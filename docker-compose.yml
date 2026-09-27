@@ -76,5 +76,22 @@ services:
       postgres:
         condition: service_healthy
 
+  order-service:
+    build:
+      context: ./backend
+      args:
+        MODULE: order-service
+    container_name: rota-order
+    environment:
+      <<: *service-env
+      RESTAURANT_SERVICE_URL: http://restaurant-service:8182
+    ports:
+      - "8183:8183"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres-data:
