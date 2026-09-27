@@ -1,0 +1,47 @@
+server:
+  port: 8183
+
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/order_db
+    username: ${DB_USER:rota}
+    password: ${DB_PASSWORD:rota}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_batch_fetch_size: 50
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  web:
+    locale: pt_BR
+    locale-resolver: fixed
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 2000
+            read-timeout: 5000
+
+rota:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-me-please-32-bytes-min}
+  cart:
+    ttl: 2d
+  clients:
+    restaurant-url: ${RESTAURANT_SERVICE_URL:http://localhost:8182}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
