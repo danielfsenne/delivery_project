@@ -3,6 +3,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'node:url'
 
+const stripApi = (path: string) => path.replace(/^\/api/, '')
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -10,10 +12,12 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Enquanto o API Gateway não existe (Fase 3), cada prefixo vai direto ao serviço.
     proxy: {
-      // Todas as chamadas passam pelo API Gateway
-      '/api': { target: 'http://localhost:8080', changeOrigin: true },
-      '/ws': { target: 'ws://localhost:8080', ws: true },
+      '/api/auth': { target: 'http://localhost:8181', rewrite: stripApi },
+      '/api/restaurants': { target: 'http://localhost:8182', rewrite: stripApi },
+      '/api/cart': { target: 'http://localhost:8183', rewrite: stripApi },
+      '/api/orders': { target: 'http://localhost:8183', rewrite: stripApi },
     },
   },
   test: {
