@@ -4,6 +4,7 @@ import com.rota.common.exception.BusinessException;
 import com.rota.common.exception.ConflictException;
 import com.rota.common.exception.ForbiddenException;
 import com.rota.common.exception.NotFoundException;
+import com.rota.common.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiError> handleBusiness(BusinessException ex, HttpServletRequest req) {
         return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req);
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException ex, HttpServletRequest req) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req);
     }
 
     @ExceptionHandler({ForbiddenException.class, AccessDeniedException.class})
