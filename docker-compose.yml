@@ -63,5 +63,18 @@ services:
       postgres:
         condition: service_healthy
 
+  restaurant-service:
+    build:
+      context: ./backend
+      args:
+        MODULE: restaurant-service
+    container_name: rota-restaurant
+    environment: *service-env
+    ports:
+      - "8182:8182"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres-data:
