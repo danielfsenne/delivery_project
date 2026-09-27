@@ -44,5 +44,24 @@ services:
       timeout: 5s
       retries: 10
 
+  auth-service:
+    build:
+      context: ./backend
+      args:
+        MODULE: auth-service
+    container_name: rota-auth
+    environment: &service-env
+      DB_HOST: postgres
+      DB_USER: ${POSTGRES_USER:-rota}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-rota}
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-please-32-bytes-min}
+    ports:
+      - "8181:8181"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres-data:
