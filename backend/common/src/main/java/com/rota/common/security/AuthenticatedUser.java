@@ -8,6 +8,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
  */
 public record AuthenticatedUser(Long id, String email, Role role) {
 
+    public static final long SERVICE_ID = 0L;
+
+    public static AuthenticatedUser service(String serviceName) {
+        return new AuthenticatedUser(SERVICE_ID, serviceName, Role.SERVICE);
+    }
+
     public boolean hasRole(Role other) {
         return role == other;
     }

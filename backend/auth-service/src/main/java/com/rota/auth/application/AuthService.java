@@ -36,8 +36,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (request.role() == Role.ADMIN) {
-            throw new BusinessException("Não é permitido se cadastrar como administrador");
+        if (!request.role().isSelfRegistrable()) {
+            throw new BusinessException("Não é permitido se cadastrar com o perfil " + request.role());
         }
         String email = User.normalizeEmail(request.email());
         if (users.existsByEmail(email)) {

@@ -48,6 +48,14 @@ public class JwtService {
                 .compact();
     }
 
+    /**
+     * Token para chamadas entre serviços (endpoints {@code /internal/**}).
+     * Nunca é entregue a usuários: só existe dentro da rede dos serviços.
+     */
+    public String generateServiceToken(String serviceName) {
+        return generateAccessToken(AuthenticatedUser.service(serviceName));
+    }
+
     public Optional<AuthenticatedUser> parse(String token) {
         try {
             Claims claims = Jwts.parser()

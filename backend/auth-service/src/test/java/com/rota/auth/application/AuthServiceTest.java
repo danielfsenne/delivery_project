@@ -74,6 +74,13 @@ class AuthServiceTest {
     }
 
     @Test
+    void shouldNotAllowSelfRegistrationAsService() {
+        assertThatThrownBy(() -> service.register(
+                new RegisterRequest("Bot", "bot@rota.dev", "senha-forte", Role.SERVICE, null)))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
     void shouldLoginWithValidCredentials() {
         User user = withId(new User("Ana", "ana@rota.dev", encoder.encode("senha-forte"), Role.CUSTOMER, null), 7L);
         when(users.findByEmail("ana@rota.dev")).thenReturn(Optional.of(user));

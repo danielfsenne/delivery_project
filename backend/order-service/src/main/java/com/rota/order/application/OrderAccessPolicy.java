@@ -36,7 +36,7 @@ public class OrderAccessPolicy {
 
     public void checkCanView(AuthenticatedUser user, Order order) {
         boolean allowed = switch (user.role()) {
-            case ADMIN -> true;
+            case ADMIN, SERVICE -> true;
             case CUSTOMER -> order.belongsToCustomer(user.id());
             case RESTAURANT -> order.belongsToRestaurantOwner(user.id());
             case DRIVER -> order.isAssignedToDriver(user.id());
@@ -49,7 +49,7 @@ public class OrderAccessPolicy {
     public void checkCanTransition(AuthenticatedUser user, Order order, OrderStatus target) {
         checkCanView(user, order);
         boolean allowed = switch (user.role()) {
-            case ADMIN -> true;
+            case ADMIN, SERVICE -> true;
             case CUSTOMER -> target == CANCELLED && CUSTOMER_CANCELLABLE.contains(order.getStatus());
             case RESTAURANT -> RESTAURANT_TARGETS.contains(target);
             case DRIVER -> DRIVER_TARGETS.contains(target);

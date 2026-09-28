@@ -44,6 +44,17 @@ class JwtServiceTest {
     }
 
     @Test
+    void shouldGenerateServiceToken() {
+        JwtService service = new JwtService(properties);
+
+        assertThat(service.parse(service.generateServiceToken("order-service")))
+                .hasValueSatisfying(u -> {
+                    assertThat(u.role()).isEqualTo(Role.SERVICE);
+                    assertThat(u.email()).isEqualTo("order-service");
+                });
+    }
+
+    @Test
     void shouldRejectGarbage() {
         assertThat(new JwtService(properties).parse("not-a-jwt")).isEmpty();
     }
