@@ -4,6 +4,8 @@ import { HomePage } from '@/features/restaurants/HomePage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RegisterPage } from '@/features/auth/RegisterPage'
 import { RestaurantPage } from '@/features/restaurants/RestaurantPage'
+import { CartPage } from '@/features/cart/CartPage'
+import { RequireRole } from '@/core/auth/RequireRole'
 
 export const router = createBrowserRouter([
   {
@@ -13,6 +15,7 @@ export const router = createBrowserRouter([
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
       { path: '/restaurants/:id', element: <RestaurantPage /> },
+      { path: '/cart', element: <RequireRole roles={['CUSTOMER']}><CartPage /></RequireRole> },
     ],
   },
 ])

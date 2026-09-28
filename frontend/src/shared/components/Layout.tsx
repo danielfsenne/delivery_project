@@ -1,10 +1,26 @@
-import { Link, Outlet } from 'react-router-dom'
-import { LogOut, ShoppingBag, User } from 'lucide-react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { LogOut, Receipt, ShoppingBag, User } from 'lucide-react'
 import { useAuthStore } from '@/core/auth/auth-store'
+import { useCart } from '@/features/cart/api'
+import { logout as logoutRequest } from '@/features/auth/api'
 
 export function Layout() {
   const user = useAuthStore((s) => s.user)
-  const logout = useAuthStore((s) => s.logout)
+  const refreshToken = useAuthStore((s) => s.refreshToken)
+  const clearSession = useAuthStore((s) => s.logout)
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { data: cart } = useCart()
+
+  const logout = () => {
+    if (refreshToken) logoutRequest(refreshToken).catch(() => undefined)
+    clearSession()
+    queryClient.clear()
+    navigate('/')
+  }
+
+  const isCustomer = user?.role === 'CUSTOMER'
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -14,12 +30,24 @@ export function Layout() {
             rota<span className="text-gray-900">.</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm">
-            <Link to="/cart" className="flex items-center gap-1 hover:text-brand-600" aria-label="Carrinho">
-              <ShoppingBag size={20} />
-            </Link>
+            {isCustomer && (
+              <>
+                <NavLink to="/orders" className="flex items-center gap-1 hover:text-brand-600">
+                  <Receipt size={18} /> <span className="hidden sm:inline">Pedidos</span>
+                </NavLink>
+                <NavLink to="/cart" className="relative flex items-center gap-1 hover:text-brand-600" aria-label="Carrinho">
+                  <ShoppingBag size={20} />
+                  {!!cart?.itemCount && (
+                    <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-brand-500 text-white text-xs font-bold flex items-center justify-center">
+                      {cart.itemCount}
+                    </span>
+                  )}
+                </NavLink>
+              </>
+            )}
             {user ? (
               <>
-                <span className="flex items-center gap-1 text-gray-600">
+                <span className="hidden sm:flex items-center gap-1 text-gray-600">
                   <User size={18} /> {user.name}
                 </span>
                 <button onClick={logout} className="flex items-center gap-1 hover:text-brand-600">
