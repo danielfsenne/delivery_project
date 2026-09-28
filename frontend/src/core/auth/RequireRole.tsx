@@ -1,19 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore, type Role } from './auth-store'
-
-export function homeFor(role: Role): string {
-  switch (role) {
-    case 'RESTAURANT':
-      return '/partner'
-    case 'DRIVER':
-      return '/driver'
-    case 'ADMIN':
-      return '/admin'
-    default:
-      return '/'
-  }
-}
+import { homeFor } from './home'
 
 /**
  * Protege rotas por papel. Sem login, redireciona para /login lembrando a origem.

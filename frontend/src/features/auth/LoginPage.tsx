@@ -7,7 +7,7 @@ import { login } from './api'
 import { useAuthStore } from '@/core/auth/auth-store'
 import { toApiError } from '@/core/api/client'
 import { Button, Card, ErrorMessage, Input } from '@/shared/components/ui'
-import { homeFor } from '@/core/auth/RequireRole'
+import { homeFor } from '@/core/auth/home'
 
 const schema = z.object({
   email: z.string().email('Informe um e-mail válido'),
