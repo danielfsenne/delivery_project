@@ -85,12 +85,26 @@ services:
     environment:
       <<: *service-env
       RESTAURANT_SERVICE_URL: http://restaurant-service:8182
+      PAYMENT_SERVICE_URL: http://payment-service:8184
     ports:
       - "8183:8183"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+
+  payment-service:
+    build:
+      context: ./backend
+      args:
+        MODULE: payment-service
+    container_name: rota-payment
+    environment: *service-env
+    ports:
+      - "8184:8184"
+    depends_on:
+      postgres:
         condition: service_healthy
 
 volumes:
