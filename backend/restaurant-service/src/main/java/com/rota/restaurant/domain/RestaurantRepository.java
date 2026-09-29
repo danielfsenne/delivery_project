@@ -3,6 +3,7 @@ package com.rota.restaurant.domain;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
@@ -23,4 +24,9 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
     Page<Restaurant> search(String city, String cuisine, String term, Pageable pageable);
 
     List<Restaurant> findByOwnerIdOrderByNameAsc(Long ownerId);
+
+    /** Soma atômica, segura para avaliações simultâneas. */
+    @Modifying
+    @Query("update Restaurant r set r.ratingSum = r.ratingSum + :score, r.ratingCount = r.ratingCount + 1 where r.id = :id")
+    int addRating(Long id, int score);
 }

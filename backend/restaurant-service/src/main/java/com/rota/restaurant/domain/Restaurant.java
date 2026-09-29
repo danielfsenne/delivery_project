@@ -58,6 +58,12 @@ public class Restaurant {
 
     private boolean active = true;
 
+    @Column(name = "rating_sum")
+    private long ratingSum;
+
+    @Column(name = "rating_count")
+    private int ratingCount;
+
     @Embedded
     private Address address;
 
@@ -178,6 +184,15 @@ public class Restaurant {
 
     public boolean isActive() {
         return active;
+    }
+
+    /** Média com uma casa decimal; nula enquanto não houver avaliações. */
+    public Double getRatingAverage() {
+        return ratingCount == 0 ? null : Math.round(ratingSum * 10.0 / ratingCount) / 10.0;
+    }
+
+    public int getRatingCount() {
+        return ratingCount;
     }
 
     public Address getAddress() {

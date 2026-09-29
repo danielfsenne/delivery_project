@@ -24,6 +24,8 @@ public record RestaurantDetailResponse(
         int deliveryTimeMax,
         boolean active,
         boolean open,
+        Double ratingAverage,
+        int ratingCount,
         Address address,
         List<OpeningHour> openingHours,
         List<CategoryResponse> categories
@@ -31,7 +33,8 @@ public record RestaurantDetailResponse(
     public static RestaurantDetailResponse from(Restaurant r, boolean open) {
         return new RestaurantDetailResponse(r.getId(), r.getOwnerId(), r.getName(), r.getDescription(),
                 r.getCuisine(), r.getPhone(), r.getImageUrl(), r.getDeliveryFee(), r.getMinOrderValue(),
-                r.getDeliveryTimeMin(), r.getDeliveryTimeMax(), r.isActive(), open, r.getAddress(),
+                r.getDeliveryTimeMin(), r.getDeliveryTimeMax(), r.isActive(), open, r.getRatingAverage(),
+                r.getRatingCount(), r.getAddress(),
                 r.getOpeningHours(), r.getCategories().stream().map(CategoryResponse::from).toList());
     }
 

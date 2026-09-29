@@ -17,11 +17,14 @@ public record RestaurantSummaryResponse(
         String city,
         String district,
         boolean active,
-        boolean open
+        boolean open,
+        Double ratingAverage,
+        int ratingCount
 ) {
     public static RestaurantSummaryResponse from(Restaurant r, boolean open) {
         return new RestaurantSummaryResponse(r.getId(), r.getName(), r.getDescription(), r.getCuisine(),
                 r.getImageUrl(), r.getDeliveryFee(), r.getMinOrderValue(), r.getDeliveryTimeMin(),
-                r.getDeliveryTimeMax(), r.getAddress().city(), r.getAddress().district(), r.isActive(), open);
+                r.getDeliveryTimeMax(), r.getAddress().city(), r.getAddress().district(), r.isActive(), open,
+                r.getRatingAverage(), r.getRatingCount());
     }
 }
