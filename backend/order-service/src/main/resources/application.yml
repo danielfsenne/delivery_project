@@ -39,6 +39,7 @@ rota:
     ttl: 2d
   clients:
     restaurant-url: ${RESTAURANT_SERVICE_URL:http://localhost:8182}
+    payment-url: ${PAYMENT_SERVICE_URL:http://localhost:8184}
 
 management:
   endpoints:

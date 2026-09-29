@@ -1,6 +1,10 @@
 package com.rota.order.application;
 
+import com.rota.common.exception.ConflictException;
 import com.rota.common.exception.NotFoundException;
+import com.rota.order.application.port.PaymentGateway.PaymentOutcome;
+import com.rota.order.domain.PaymentMethod;
+import java.math.BigDecimal;
 import com.rota.common.security.AuthenticatedUser;
 import com.rota.order.domain.Order;
 import com.rota.order.domain.OrderRepository;
@@ -69,6 +73,39 @@ public class OrderService {
 
     public OrderResponse cancel(AuthenticatedUser user, Long orderId, String reason) {
         return changeStatus(user, orderId, OrderStatus.CANCELLED, reason);
+    }
+
+    /**
+     * Dados para cobrar um pedido que aguarda pagamento.
+     */
+    @Transactional(readOnly = true)
+    public PayableOrder payable(AuthenticatedUser user, Long orderId) {
+        Order order = find(orderId);
+        policy.checkCanView(user, order);
+        if (order.getStatus() != OrderStatus.PAYMENT_PENDING) {
+            throw new ConflictException("O pedido não está aguardando pagamento");
+        }
+        return new PayableOrder(order.getId(), order.getCustomerId(), order.getTotal(), order.getPaymentMethod());
+    }
+
+    /**
+     * Aplica o resultado da cobrança. Idempotente: se o pedido já saiu de PAYMENT_PENDING
+     * (ex.: foi cancelado enquanto o pagamento processava), nada muda.
+     */
+    public OrderResponse applyPayment(Long orderId, PaymentOutcome outcome) {
+        Order order = find(orderId);
+        if (order.getStatus() == OrderStatus.PAYMENT_PENDING) {
+            if (outcome.approved()) {
+                order.transitionTo(OrderStatus.PAID, null, null, clock.instant());
+            } else {
+                order.transitionTo(OrderStatus.CANCELLED, null,
+                        "Pagamento recusado: " + outcome.failureReason(), clock.instant());
+            }
+        }
+        return OrderResponse.from(orders.saveAndFlush(order));
+    }
+
+    public record PayableOrder(Long orderId, Long customerId, BigDecimal amount, PaymentMethod method) {
     }
 
     private Order find(Long orderId) {

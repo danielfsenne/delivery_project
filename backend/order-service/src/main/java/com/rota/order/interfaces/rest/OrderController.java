@@ -3,6 +3,7 @@ package com.rota.order.interfaces.rest;
 import com.rota.common.security.AuthenticatedUser;
 import com.rota.order.application.CheckoutService;
 import com.rota.order.application.OrderService;
+import com.rota.order.application.PaymentOrchestrator;
 import com.rota.order.domain.OrderStatus;
 import com.rota.order.interfaces.rest.dto.OrderDtos.CancelRequest;
 import com.rota.order.interfaces.rest.dto.OrderDtos.CheckoutRequest;
@@ -34,10 +35,13 @@ public class OrderController {
 
     private final CheckoutService checkoutService;
     private final OrderService orderService;
+    private final PaymentOrchestrator paymentOrchestrator;
 
-    public OrderController(CheckoutService checkoutService, OrderService orderService) {
+    public OrderController(CheckoutService checkoutService, OrderService orderService,
+                           PaymentOrchestrator paymentOrchestrator) {
         this.checkoutService = checkoutService;
         this.orderService = orderService;
+        this.paymentOrchestrator = paymentOrchestrator;
     }
 
     @PostMapping
@@ -45,7 +49,15 @@ public class OrderController {
     @PreAuthorize("hasRole('CUSTOMER')")
     public OrderResponse checkout(@AuthenticationPrincipal AuthenticatedUser user,
                                   @Valid @RequestBody CheckoutRequest request) {
-        return checkoutService.checkout(user.id(), request);
+        OrderResponse created = checkoutService.checkout(user.id(), request);
+        return paymentOrchestrator.tryPayAfterCheckout(user, created);
+    }
+
+    /** Nova tentativa de pagamento, quando o serviço de pagamento estava indisponível. */
+    @PostMapping("/{id}/pay")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public OrderResponse pay(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long id) {
+        return paymentOrchestrator.pay(user, id);
     }
 
     @GetMapping
