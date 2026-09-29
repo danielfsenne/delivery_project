@@ -45,6 +45,10 @@ public class PaymentOrchestrator {
         } catch (ServiceUnavailableException e) {
             log.warn("Pedido {} criado, mas o pagamento está indisponível: {}", created.id(), e.getMessage());
             return created;
+        } catch (RuntimeException e) {
+            // O pedido já foi gravado; uma falha inesperada na cobrança não deve virar erro do checkout.
+            log.error("Falha ao cobrar o pedido {} após o checkout", created.id(), e);
+            return created;
         }
     }
 }
