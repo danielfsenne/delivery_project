@@ -15,4 +15,8 @@ public record DeliveryAddress(
         Double latitude,
         Double longitude
 ) {
+    public String formatted() {
+        String line = street + ", " + number + (complement == null || complement.isBlank() ? "" : " - " + complement);
+        return line + ", " + district + ", " + city + "/" + state;
+    }
 }

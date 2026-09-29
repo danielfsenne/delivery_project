@@ -81,6 +81,7 @@ public class CheckoutService {
                 .restaurant(quote.restaurantId(), quote.restaurantName(), quote.ownerId())
                 .paymentMethod(request.paymentMethod())
                 .deliveryAddress(request.deliveryAddress().toAddress())
+                .pickup(quote.address())
                 .deliveryFee(quote.deliveryFee())
                 .coupon(cart.couponCode(), discount)
                 .notes(request.notes())

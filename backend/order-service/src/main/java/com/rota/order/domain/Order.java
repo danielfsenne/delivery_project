@@ -69,6 +69,15 @@ public class Order {
     @Embedded
     private DeliveryAddress deliveryAddress;
 
+    @Column(name = "pickup_address")
+    private String pickupAddress;
+
+    @Column(name = "pickup_latitude")
+    private Double pickupLatitude;
+
+    @Column(name = "pickup_longitude")
+    private Double pickupLongitude;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private List<OrderItem> items = new ArrayList<>();
@@ -96,6 +105,11 @@ public class Order {
         this.restaurantOwnerId = b.restaurantOwnerId;
         this.paymentMethod = b.paymentMethod;
         this.deliveryAddress = b.deliveryAddress;
+        if (b.pickup != null) {
+            this.pickupAddress = b.pickup.formatted();
+            this.pickupLatitude = b.pickup.latitude();
+            this.pickupLongitude = b.pickup.longitude();
+        }
         this.notes = b.notes;
         this.couponCode = b.couponCode;
         this.deliveryFee = money(b.deliveryFee);
@@ -209,6 +223,18 @@ public class Order {
         return deliveryAddress;
     }
 
+    public String getPickupAddress() {
+        return pickupAddress;
+    }
+
+    public Double getPickupLatitude() {
+        return pickupLatitude;
+    }
+
+    public Double getPickupLongitude() {
+        return pickupLongitude;
+    }
+
     public List<OrderItem> getItems() {
         return List.copyOf(items);
     }
@@ -232,6 +258,7 @@ public class Order {
         private Long restaurantOwnerId;
         private PaymentMethod paymentMethod;
         private DeliveryAddress deliveryAddress;
+        private DeliveryAddress pickup;
         private String notes;
         private BigDecimal deliveryFee = BigDecimal.ZERO;
         private BigDecimal discount;
@@ -258,6 +285,12 @@ public class Order {
 
         public Builder deliveryAddress(DeliveryAddress address) {
             this.deliveryAddress = address;
+            return this;
+        }
+
+        /** Endereço do restaurante, onde o entregador retira o pedido. */
+        public Builder pickup(DeliveryAddress pickup) {
+            this.pickup = pickup;
             return this;
         }
 

@@ -66,7 +66,7 @@ class CheckoutServiceTest {
     }
 
     private void givenQuote(boolean open, BigDecimal minOrder) {
-        Quote quote = new Quote(10L, "Burger House", 2L, open, new BigDecimal("5.99"), minOrder, List.of(
+        Quote quote = new Quote(10L, "Burger House", 2L, open, new BigDecimal("5.99"), minOrder, null, List.of(
                 new QuotedItem(100L, "X-Bacon", new BigDecimal("37.90"), 2,
                         List.of(new QuotedOption(1L, "Bacon extra", new BigDecimal("5.00"))))));
         when(catalog.quote(eq(10L), anyList())).thenReturn(quote);
