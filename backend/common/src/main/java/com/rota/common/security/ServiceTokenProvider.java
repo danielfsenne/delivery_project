@@ -17,7 +17,7 @@ public class ServiceTokenProvider {
     private final Clock clock;
 
     private String token;
-    private Instant expiresAt = Instant.MIN;
+    private Instant expiresAt;
 
     public ServiceTokenProvider(JwtService jwtService, String serviceName, Clock clock) {
         this.jwtService = jwtService;
@@ -27,7 +27,7 @@ public class ServiceTokenProvider {
 
     public synchronized String token() {
         Instant now = clock.instant();
-        if (now.isAfter(expiresAt.minus(RENEW_BEFORE))) {
+        if (token == null || !now.isBefore(expiresAt.minus(RENEW_BEFORE))) {
             token = jwtService.generateServiceToken(serviceName);
             expiresAt = now.plusSeconds(jwtService.accessTokenTtlSeconds());
         }
