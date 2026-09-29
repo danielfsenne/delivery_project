@@ -20,6 +20,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
         http.with(StatelessSecurity.jwt(jwtService), c -> {});
         http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/internal/**").hasRole("SERVICE")
                 .requestMatchers("/cart", "/cart/**").hasRole("CUSTOMER")
                 .requestMatchers("/orders/restaurant/**").hasAnyRole("RESTAURANT", "ADMIN")
                 .requestMatchers("/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
