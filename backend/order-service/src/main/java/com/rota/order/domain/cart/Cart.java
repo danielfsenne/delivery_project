@@ -20,7 +20,8 @@ public record Cart(
         String restaurantName,
         BigDecimal deliveryFee,
         BigDecimal minOrderValue,
-        List<CartItem> items
+        List<CartItem> items,
+        String couponCode
 ) {
     public static final int MAX_QUANTITY_PER_ITEM = 50;
 
@@ -29,7 +30,7 @@ public record Cart(
     }
 
     public static Cart empty(Long userId) {
-        return new Cart(userId, null, null, BigDecimal.ZERO, BigDecimal.ZERO, List.of());
+        return new Cart(userId, null, null, BigDecimal.ZERO, BigDecimal.ZERO, List.of(), null);
     }
 
     @JsonIgnore
@@ -57,7 +58,7 @@ public record Cart(
             checkQuantity(item.quantity());
             newItems.add(item);
         }
-        return new Cart(userId, restaurantId, restaurantName, deliveryFee, minOrderValue, newItems);
+        return new Cart(userId, restaurantId, restaurantName, deliveryFee, minOrderValue, newItems, couponCode);
     }
 
     public Cart updateQuantity(String itemId, int quantity) {
@@ -69,7 +70,7 @@ public record Cart(
                 .map(i -> i.id().equals(itemId) ? i.withQuantity(quantity) : i)
                 .toList();
         requireItem(itemId);
-        return new Cart(userId, restaurantId, restaurantName, deliveryFee, minOrderValue, newItems);
+        return new Cart(userId, restaurantId, restaurantName, deliveryFee, minOrderValue, newItems, couponCode);
     }
 
     public Cart remove(String itemId) {
@@ -77,7 +78,12 @@ public record Cart(
         List<CartItem> newItems = items.stream().filter(i -> !i.id().equals(itemId)).toList();
         return newItems.isEmpty()
                 ? empty(userId)
-                : new Cart(userId, restaurantId, restaurantName, deliveryFee, minOrderValue, newItems);
+                : new Cart(userId, restaurantId, restaurantName, deliveryFee, minOrderValue, newItems, couponCode);
+    }
+
+    /** Guarda o código do cupom; a validação acontece ao exibir o carrinho e no checkout. */
+    public Cart withCoupon(String code) {
+        return new Cart(userId, restaurantId, restaurantName, deliveryFee, minOrderValue, items, code);
     }
 
     public BigDecimal subtotal() {

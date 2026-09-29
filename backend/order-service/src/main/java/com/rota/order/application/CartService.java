@@ -1,5 +1,7 @@
 package com.rota.order.application;
 
+import com.rota.common.exception.BusinessException;
+import com.rota.common.exception.NotFoundException;
 import com.rota.order.application.port.RestaurantCatalog;
 import com.rota.order.application.port.RestaurantCatalog.Quote;
 import com.rota.order.application.port.RestaurantCatalog.QuoteLine;
@@ -7,9 +9,12 @@ import com.rota.order.application.port.RestaurantCatalog.QuotedItem;
 import com.rota.order.domain.cart.Cart;
 import com.rota.order.domain.cart.CartItem;
 import com.rota.order.domain.cart.CartRepository;
+import com.rota.order.domain.coupon.Coupon;
 import com.rota.order.interfaces.rest.dto.CartDtos.AddItemRequest;
+import com.rota.order.interfaces.rest.dto.CartDtos.CartResponse;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,10 +23,41 @@ public class CartService {
 
     private final CartRepository carts;
     private final RestaurantCatalog catalog;
+    private final CouponService coupons;
 
-    public CartService(CartRepository carts, RestaurantCatalog catalog) {
+    public CartService(CartRepository carts, RestaurantCatalog catalog, CouponService coupons) {
         this.carts = carts;
         this.catalog = catalog;
+        this.coupons = coupons;
+    }
+
+    /**
+     * Monta a visão do carrinho com o desconto do cupom recalculado sobre o subtotal atual.
+     */
+    public CartResponse view(Cart cart) {
+        if (cart.couponCode() == null || cart.isEmpty()) {
+            return CartResponse.from(cart, BigDecimal.ZERO, null);
+        }
+        try {
+            return CartResponse.from(cart, coupons.evaluate(cart.couponCode(), cart.subtotal(), cart.restaurantId()),
+                    null);
+        } catch (BusinessException | NotFoundException e) {
+            return CartResponse.from(cart, BigDecimal.ZERO, e.getMessage());
+        }
+    }
+
+    /** Aplica o cupom somente se ele for válido para o carrinho atual. */
+    public Cart applyCoupon(Long userId, String code) {
+        Cart cart = get(userId);
+        if (cart.isEmpty()) {
+            throw new BusinessException("Adicione itens ao carrinho antes de aplicar um cupom");
+        }
+        coupons.evaluate(code, cart.subtotal(), cart.restaurantId());
+        return persist(cart.withCoupon(Coupon.normalize(code)));
+    }
+
+    public Cart removeCoupon(Long userId) {
+        return persist(get(userId).withCoupon(null));
     }
 
     public Cart get(Long userId) {

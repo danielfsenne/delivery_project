@@ -101,6 +101,14 @@ class CartTest {
     }
 
     @Test
+    void shouldKeepCouponAcrossChangesAndDropItWhenEmptied() {
+        Cart cart = cartWith(burger("a", 1, List.of())).withCoupon("SAVE10").updateQuantity("a", 3);
+
+        assertThat(cart.couponCode()).isEqualTo("SAVE10");
+        assertThat(cart.remove("a").couponCode()).isNull();
+    }
+
+    @Test
     void shouldFailForUnknownItem() {
         assertThatThrownBy(() -> cartWith(burger("a", 1, List.of())).remove("zzz"))
                 .isInstanceOf(NotFoundException.class);

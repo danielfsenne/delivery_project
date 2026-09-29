@@ -41,14 +41,20 @@ public final class CartDtos {
             BigDecimal discount,
             BigDecimal total,
             BigDecimal minOrderValue,
-            boolean reachesMinimumOrder
+            boolean reachesMinimumOrder,
+            String couponCode,
+            String couponError
     ) {
-        public static CartResponse from(Cart cart) {
+        /**
+         * @param discount    desconto do cupom já validado (zero se não houver cupom ou se ele for inválido)
+         * @param couponError motivo pelo qual o cupom do carrinho não se aplica no momento
+         */
+        public static CartResponse from(Cart cart, BigDecimal discount, String couponError) {
             BigDecimal fee = cart.isEmpty() ? BigDecimal.ZERO : cart.deliveryFee();
-            BigDecimal discount = BigDecimal.ZERO;
-            BigDecimal total = cart.subtotal().add(fee).subtract(discount);
+            BigDecimal total = cart.subtotal().add(fee).subtract(discount).max(BigDecimal.ZERO);
             return new CartResponse(cart.restaurantId(), cart.restaurantName(), cart.items(), cart.itemCount(),
-                    cart.subtotal(), fee, discount, total, cart.minOrderValue(), cart.reachesMinimumOrder());
+                    cart.subtotal(), fee, discount, total, cart.minOrderValue(), cart.reachesMinimumOrder(),
+                    cart.couponCode(), couponError);
         }
     }
 }
