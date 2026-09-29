@@ -4,6 +4,7 @@ import com.rota.common.exception.BusinessException;
 import com.rota.common.exception.ConflictException;
 import com.rota.common.exception.ForbiddenException;
 import com.rota.common.exception.NotFoundException;
+import com.rota.common.exception.ServiceUnavailableException;
 import com.rota.common.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -40,6 +41,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiError> handleBusiness(BusinessException ex, HttpServletRequest req) {
         return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req);
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ApiError> handleUnavailable(ServiceUnavailableException ex, HttpServletRequest req) {
+        log.warn("Dependência indisponível em {}: {}", req.getRequestURI(), ex.getCause() == null
+                ? ex.getMessage() : ex.getCause().toString());
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), req);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
