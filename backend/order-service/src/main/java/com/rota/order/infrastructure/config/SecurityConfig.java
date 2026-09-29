@@ -4,6 +4,7 @@ import com.rota.common.security.JwtService;
 import com.rota.common.security.StatelessSecurity;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -23,6 +24,7 @@ public class SecurityConfig {
                 .requestMatchers("/internal/**").hasRole("SERVICE")
                 .requestMatchers("/cart", "/cart/**").hasRole("CUSTOMER")
                 .requestMatchers("/orders/restaurant/**").hasAnyRole("RESTAURANT", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/orders/reviews").permitAll()
                 .requestMatchers("/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                 .permitAll()
                 .anyRequest().authenticated());
