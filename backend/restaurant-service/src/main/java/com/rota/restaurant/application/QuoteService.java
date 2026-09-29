@@ -41,7 +41,8 @@ public class QuoteService {
                 .toList();
 
         return new QuoteResponse(restaurant.getId(), restaurant.getName(), restaurant.getOwnerId(),
-                restaurant.isOpenAt(clock.now()), restaurant.getDeliveryFee(), restaurant.getMinOrderValue(), items);
+                restaurant.isOpenAt(clock.now()), restaurant.getDeliveryFee(), restaurant.getMinOrderValue(),
+                restaurant.getAddress(), items);
     }
 
     private QuoteResponse.Item quoteItem(Restaurant restaurant, QuoteRequest.Item item) {

@@ -1,5 +1,7 @@
 package com.rota.restaurant.interfaces.rest.dto;
 
+import com.rota.restaurant.domain.Address;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -10,6 +12,7 @@ public record QuoteResponse(
         boolean open,
         BigDecimal deliveryFee,
         BigDecimal minOrderValue,
+        Address address,
         List<Item> items
 ) {
     /**
