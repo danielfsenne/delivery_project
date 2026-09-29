@@ -33,6 +33,7 @@ spring:
             read-timeout: 5000
 
 rota:
+  timezone: America/Sao_Paulo
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-please-32-bytes-min}
   cart:

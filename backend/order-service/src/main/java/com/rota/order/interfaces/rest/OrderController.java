@@ -4,6 +4,8 @@ import com.rota.common.security.AuthenticatedUser;
 import com.rota.order.application.CheckoutService;
 import com.rota.order.application.OrderService;
 import com.rota.order.application.PaymentOrchestrator;
+import com.rota.order.application.RestaurantStatsService;
+import com.rota.order.application.RestaurantStatsService.DailyStats;
 import com.rota.order.domain.OrderStatus;
 import com.rota.order.interfaces.rest.dto.OrderDtos.CancelRequest;
 import com.rota.order.interfaces.rest.dto.OrderDtos.CheckoutRequest;
@@ -36,12 +38,14 @@ public class OrderController {
     private final CheckoutService checkoutService;
     private final OrderService orderService;
     private final PaymentOrchestrator paymentOrchestrator;
+    private final RestaurantStatsService statsService;
 
     public OrderController(CheckoutService checkoutService, OrderService orderService,
-                           PaymentOrchestrator paymentOrchestrator) {
+                           PaymentOrchestrator paymentOrchestrator, RestaurantStatsService statsService) {
         this.checkoutService = checkoutService;
         this.orderService = orderService;
         this.paymentOrchestrator = paymentOrchestrator;
+        this.statsService = statsService;
     }
 
     @PostMapping
@@ -82,6 +86,11 @@ public class OrderController {
     public OrderResponse cancel(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long id,
                                 @Valid @RequestBody(required = false) CancelRequest request) {
         return orderService.cancel(user, id, request == null ? null : request.reason());
+    }
+
+    @GetMapping("/restaurant/{restaurantId}/stats")
+    public DailyStats stats(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long restaurantId) {
+        return statsService.today(user, restaurantId);
     }
 
     @GetMapping("/restaurant/{restaurantId}")
