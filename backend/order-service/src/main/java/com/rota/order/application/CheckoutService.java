@@ -17,7 +17,9 @@ import com.rota.order.interfaces.rest.dto.OrderDtos.OrderResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,12 +31,15 @@ import java.util.stream.Collectors;
 public class CheckoutService {
 
     private final CartService cartService;
+    private final CouponService couponService;
     private final RestaurantCatalog catalog;
     private final OrderRepository orders;
     private final Clock clock;
 
-    public CheckoutService(CartService cartService, RestaurantCatalog catalog, OrderRepository orders, Clock clock) {
+    public CheckoutService(CartService cartService, CouponService couponService, RestaurantCatalog catalog,
+                           OrderRepository orders, Clock clock) {
         this.cartService = cartService;
+        this.couponService = couponService;
         this.catalog = catalog;
         this.orders = orders;
         this.clock = clock;
@@ -56,24 +61,32 @@ public class CheckoutService {
             throw new BusinessException(quote.restaurantName() + " está fechado no momento");
         }
 
+        List<OrderItem> items = new ArrayList<>();
+        for (int i = 0; i < cartItems.size(); i++) {
+            items.add(toOrderItem(quote.items().get(i), cartItems.get(i).notes()));
+        }
+        BigDecimal subtotal = items.stream().map(OrderItem::totalPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (subtotal.compareTo(quote.minOrderValue()) < 0) {
+            throw new BusinessException("Pedido mínimo para " + quote.restaurantName() + " é R$ "
+                    + quote.minOrderValue());
+        }
+
+        BigDecimal discount = cart.couponCode() == null
+                ? BigDecimal.ZERO
+                : couponService.redeem(cart.couponCode(), subtotal, quote.restaurantId());
+
         Order.Builder builder = Order.builder()
                 .customer(customerId)
                 .restaurant(quote.restaurantId(), quote.restaurantName(), quote.ownerId())
                 .paymentMethod(request.paymentMethod())
                 .deliveryAddress(request.deliveryAddress().toAddress())
                 .deliveryFee(quote.deliveryFee())
+                .coupon(cart.couponCode(), discount)
                 .notes(request.notes())
                 .createdAt(clock.instant());
-
-        for (int i = 0; i < cartItems.size(); i++) {
-            builder.item(toOrderItem(quote.items().get(i), cartItems.get(i).notes()));
-        }
+        items.forEach(builder::item);
         Order order = builder.build();
-
-        if (order.getSubtotal().compareTo(quote.minOrderValue()) < 0) {
-            throw new BusinessException("Pedido mínimo para " + quote.restaurantName() + " é R$ "
-                    + quote.minOrderValue());
-        }
 
         order.transitionTo(OrderStatus.PAYMENT_PENDING, null, null, clock.instant());
         OrderResponse response = OrderResponse.from(orders.saveAndFlush(order));

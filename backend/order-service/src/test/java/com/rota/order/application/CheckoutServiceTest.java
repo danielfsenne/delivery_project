@@ -42,8 +42,9 @@ class CheckoutServiceTest {
     private final CartRepository carts = mock(CartRepository.class);
     private final RestaurantCatalog catalog = mock(RestaurantCatalog.class);
     private final OrderRepository orders = mock(OrderRepository.class);
-    private final CheckoutService service = new CheckoutService(new CartService(carts, catalog), catalog, orders,
-            Clock.fixed(Instant.parse("2026-01-01T12:00:00Z"), ZoneOffset.UTC));
+    private final CouponService coupons = mock(CouponService.class);
+    private final CheckoutService service = new CheckoutService(new CartService(carts, catalog, coupons), coupons,
+            catalog, orders, Clock.fixed(Instant.parse("2026-01-01T12:00:00Z"), ZoneOffset.UTC));
 
     private final CheckoutRequest request = new CheckoutRequest(
             new AddressRequest("Rua B", "10", null, "Centro", "Franca", "SP", "14400-000", null, null),
@@ -55,8 +56,12 @@ class CheckoutServiceTest {
     }
 
     private void givenCart(BigDecimal minOrder) {
+        givenCart(minOrder, null);
+    }
+
+    private void givenCart(BigDecimal minOrder, String coupon) {
         CartItem item = new CartItem("i1", 100L, "X-Bacon (antigo)", new BigDecimal("30.00"), 2, List.of(), "bem passado");
-        Cart cart = new Cart(CUSTOMER, 10L, "Burger House", new BigDecimal("5.99"), minOrder, List.of(item));
+        Cart cart = new Cart(CUSTOMER, 10L, "Burger House", new BigDecimal("5.99"), minOrder, List.of(item), coupon);
         when(carts.findByUserId(CUSTOMER)).thenReturn(Optional.of(cart));
     }
 
@@ -85,6 +90,30 @@ class CheckoutServiceTest {
         assertThat(order.history()).extracting(h -> h.newStatus())
                 .containsExactly(OrderStatus.CREATED, OrderStatus.PAYMENT_PENDING);
         verify(carts).deleteByUserId(CUSTOMER);
+    }
+
+    @Test
+    void shouldRedeemCouponAndApplyDiscount() {
+        givenCart(BigDecimal.ZERO, "SAVE10");
+        givenQuote(true, BigDecimal.ZERO);
+        when(coupons.redeem("SAVE10", new BigDecimal("75.80"), 10L)).thenReturn(new BigDecimal("7.58"));
+
+        OrderResponse order = service.checkout(CUSTOMER, request);
+
+        assertThat(order.couponCode()).isEqualTo("SAVE10");
+        assertThat(order.discount()).isEqualByComparingTo("7.58");
+        assertThat(order.total()).isEqualByComparingTo("74.21");
+    }
+
+    @Test
+    void shouldNotCreateOrderWhenCouponIsInvalid() {
+        givenCart(BigDecimal.ZERO, "VENCIDO");
+        givenQuote(true, BigDecimal.ZERO);
+        when(coupons.redeem(any(), any(), any())).thenThrow(new BusinessException("Cupom VENCIDO expirou"));
+
+        assertThatThrownBy(() -> service.checkout(CUSTOMER, request)).hasMessageContaining("expirou");
+        verify(orders, never()).saveAndFlush(any(Order.class));
+        verify(carts, never()).deleteByUserId(any());
     }
 
     @Test

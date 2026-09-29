@@ -66,6 +66,7 @@ public final class OrderDtos {
             BigDecimal deliveryFee,
             BigDecimal discount,
             BigDecimal total,
+            String couponCode,
             String notes,
             DeliveryAddress deliveryAddress,
             List<HistoryResponse> history,
@@ -76,7 +77,7 @@ public final class OrderDtos {
             return new OrderResponse(o.getId(), o.getStatus(), o.getStatus().nextStatuses(), o.getCustomerId(),
                     o.getRestaurantId(), o.getRestaurantName(), o.getDriverId(), o.getPaymentMethod(),
                     o.getItems().stream().map(ItemResponse::from).toList(), o.getSubtotal(), o.getDeliveryFee(),
-                    o.getDiscount(), o.getTotal(), o.getNotes(), o.getDeliveryAddress(),
+                    o.getDiscount(), o.getTotal(), o.getCouponCode(), o.getNotes(), o.getDeliveryAddress(),
                     o.getHistory().stream().map(HistoryResponse::from).toList(), o.getCreatedAt(), o.getUpdatedAt());
         }
     }

@@ -63,6 +63,9 @@ public class Order {
 
     private String notes;
 
+    @Column(name = "coupon_code")
+    private String couponCode;
+
     @Embedded
     private DeliveryAddress deliveryAddress;
 
@@ -94,6 +97,7 @@ public class Order {
         this.paymentMethod = b.paymentMethod;
         this.deliveryAddress = b.deliveryAddress;
         this.notes = b.notes;
+        this.couponCode = b.couponCode;
         this.deliveryFee = money(b.deliveryFee);
         this.discount = money(b.discount == null ? BigDecimal.ZERO : b.discount);
         this.createdAt = b.now;
@@ -197,6 +201,10 @@ public class Order {
         return notes;
     }
 
+    public String getCouponCode() {
+        return couponCode;
+    }
+
     public DeliveryAddress getDeliveryAddress() {
         return deliveryAddress;
     }
@@ -227,6 +235,7 @@ public class Order {
         private String notes;
         private BigDecimal deliveryFee = BigDecimal.ZERO;
         private BigDecimal discount;
+        private String couponCode;
         private final List<OrderItem> items = new ArrayList<>();
         private Instant now = Instant.now();
 
@@ -263,6 +272,12 @@ public class Order {
         }
 
         public Builder discount(BigDecimal discount) {
+            this.discount = discount;
+            return this;
+        }
+
+        public Builder coupon(String code, BigDecimal discount) {
+            this.couponCode = code;
             this.discount = discount;
             return this;
         }
