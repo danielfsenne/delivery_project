@@ -9,6 +9,7 @@ import { toApiError } from '@/core/api/client'
 import type { Product } from '@/core/api/types'
 import { cn, formatCurrency } from '@/shared/lib/format'
 import { Badge, ErrorMessage, Spinner } from '@/shared/components/ui'
+import { Rating } from '@/shared/components/Rating'
 
 export function RestaurantPage() {
   const { id } = useParams()
@@ -61,6 +62,7 @@ export function RestaurantPage() {
             <div>
               <h1 className="text-2xl font-bold">{restaurant.name}</h1>
               <p className="text-gray-600">{restaurant.description}</p>
+              <Rating average={restaurant.ratingAverage} count={restaurant.ratingCount} className="mt-1" />
             </div>
             <Badge className={restaurant.open ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}>
               {restaurant.open ? 'Aberto' : 'Fechado'}

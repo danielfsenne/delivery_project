@@ -46,3 +46,11 @@ export function useUpdateCartItem() {
 export function useRemoveCartItem() {
   return useCartMutation(async (itemId: string) => (await api.delete<Cart>(`/cart/items/${itemId}`)).data)
 }
+
+export function useApplyCoupon() {
+  return useCartMutation(async (code: string) => (await api.put<Cart>('/cart/coupon', { code })).data)
+}
+
+export function useRemoveCoupon() {
+  return useCartMutation(async () => (await api.delete<Cart>('/cart/coupon')).data)
+}

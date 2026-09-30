@@ -5,6 +5,7 @@ import { toApiError } from '@/core/api/client'
 import { formatCurrency } from '@/shared/lib/format'
 import { Button, Card, EmptyState, ErrorMessage, Spinner } from '@/shared/components/ui'
 import { CartSummary } from './CartSummary'
+import { CouponForm } from './CouponForm'
 
 export function CartPage() {
   const navigate = useNavigate()
@@ -73,9 +74,10 @@ export function CartPage() {
         </ul>
       </Card>
 
-      <div>
+      <div className="space-y-4">
         <CartSummary cart={cart} />
-        <Button className="w-full mt-4" disabled={!cart.reachesMinimumOrder} onClick={() => navigate('/checkout')}>
+        <CouponForm cart={cart} />
+        <Button className="w-full" disabled={!cart.reachesMinimumOrder} onClick={() => navigate('/checkout')}>
           Continuar
         </Button>
       </div>

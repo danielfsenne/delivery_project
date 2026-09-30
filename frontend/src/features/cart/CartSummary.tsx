@@ -17,7 +17,7 @@ export function CartSummary({ cart }: { cart: Cart }) {
         </div>
         {cart.discount > 0 && (
           <div className="flex justify-between text-green-700">
-            <dt>Desconto</dt>
+            <dt>Desconto{cart.couponCode ? ` (${cart.couponCode})` : ''}</dt>
             <dd>- {formatCurrency(cart.discount)}</dd>
           </div>
         )}

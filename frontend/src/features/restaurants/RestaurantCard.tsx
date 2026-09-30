@@ -3,6 +3,7 @@ import { Clock, Bike } from 'lucide-react'
 import type { RestaurantSummary } from '@/core/api/types'
 import { formatCurrency } from '@/shared/lib/format'
 import { Badge } from '@/shared/components/ui'
+import { Rating } from '@/shared/components/Rating'
 
 export function RestaurantCard({ restaurant }: { restaurant: RestaurantSummary }) {
   const r = restaurant
@@ -22,7 +23,10 @@ export function RestaurantCard({ restaurant }: { restaurant: RestaurantSummary }
         )}
       </div>
       <div className="p-4">
-        <h3 className="font-semibold text-lg leading-tight">{r.name}</h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-lg leading-tight">{r.name}</h3>
+          <Rating average={r.ratingAverage} count={r.ratingCount} />
+        </div>
         <p className="text-sm text-gray-500">
           {r.cuisine} · {r.district}
         </p>
