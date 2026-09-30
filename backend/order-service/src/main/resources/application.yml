@@ -41,6 +41,7 @@ rota:
   clients:
     restaurant-url: ${RESTAURANT_SERVICE_URL:http://localhost:8182}
     payment-url: ${PAYMENT_SERVICE_URL:http://localhost:8184}
+    delivery-url: ${DELIVERY_SERVICE_URL:http://localhost:8185}
 
 management:
   endpoints:

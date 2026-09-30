@@ -11,8 +11,6 @@ import java.util.Set;
 
 import static com.rota.order.domain.OrderStatus.CANCELLED;
 import static com.rota.order.domain.OrderStatus.CREATED;
-import static com.rota.order.domain.OrderStatus.DELIVERED;
-import static com.rota.order.domain.OrderStatus.OUT_FOR_DELIVERY;
 import static com.rota.order.domain.OrderStatus.PAID;
 import static com.rota.order.domain.OrderStatus.PAYMENT_PENDING;
 import static com.rota.order.domain.OrderStatus.PREPARING;
@@ -32,8 +30,6 @@ public class OrderAccessPolicy {
     private static final Set<OrderStatus> RESTAURANT_TARGETS =
             EnumSet.of(RESTAURANT_ACCEPTED, PREPARING, READY_FOR_PICKUP, CANCELLED);
 
-    private static final Set<OrderStatus> DRIVER_TARGETS = EnumSet.of(OUT_FOR_DELIVERY, DELIVERED);
-
     public void checkCanView(AuthenticatedUser user, Order order) {
         boolean allowed = switch (user.role()) {
             case ADMIN, SERVICE -> true;
@@ -52,7 +48,8 @@ public class OrderAccessPolicy {
             case ADMIN, SERVICE -> true;
             case CUSTOMER -> target == CANCELLED && CUSTOMER_CANCELLABLE.contains(order.getStatus());
             case RESTAURANT -> RESTAURANT_TARGETS.contains(target);
-            case DRIVER -> DRIVER_TARGETS.contains(target);
+            // Entregadores avançam o pedido pelo delivery-service, que chama os endpoints internos.
+            case DRIVER -> false;
         };
         if (!allowed) {
             throw new ForbiddenException("Você não pode alterar este pedido para " + target);

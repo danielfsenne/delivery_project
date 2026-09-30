@@ -2,13 +2,13 @@ package com.rota.order.application;
 
 import com.rota.common.exception.ConflictException;
 import com.rota.common.exception.NotFoundException;
-import com.rota.order.application.port.PaymentGateway.PaymentOutcome;
-import com.rota.order.domain.PaymentMethod;
-import java.math.BigDecimal;
 import com.rota.common.security.AuthenticatedUser;
+import com.rota.order.application.port.DeliveryGateway;
+import com.rota.order.application.port.PaymentGateway.PaymentOutcome;
 import com.rota.order.domain.Order;
 import com.rota.order.domain.OrderRepository;
 import com.rota.order.domain.OrderStatus;
+import com.rota.order.domain.PaymentMethod;
 import com.rota.order.interfaces.rest.dto.OrderDtos.OrderResponse;
 import com.rota.order.interfaces.rest.dto.OrderDtos.OrderSummaryResponse;
 import org.springframework.data.domain.Page;
@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -30,11 +31,14 @@ public class OrderService {
 
     private final OrderRepository orders;
     private final OrderAccessPolicy policy;
+    private final DeliveryGateway deliveryGateway;
     private final Clock clock;
 
-    public OrderService(OrderRepository orders, OrderAccessPolicy policy, Clock clock) {
+    public OrderService(OrderRepository orders, OrderAccessPolicy policy, DeliveryGateway deliveryGateway,
+                        Clock clock) {
         this.orders = orders;
         this.policy = policy;
+        this.deliveryGateway = deliveryGateway;
         this.clock = clock;
     }
 
@@ -65,10 +69,37 @@ public class OrderService {
     }
 
     public OrderResponse changeStatus(AuthenticatedUser user, Long orderId, OrderStatus target, String reason) {
+        return transition(user, orderId, target, user.id(), reason);
+    }
+
+    /**
+     * Mudança feita por outro serviço em nome de um usuário (ex.: entregador via delivery-service).
+     */
+    public OrderResponse changeStatusOnBehalf(AuthenticatedUser service, Long orderId, OrderStatus target,
+                                              Long actorId) {
+        return transition(service, orderId, target, actorId, null);
+    }
+
+    public OrderResponse assignDriver(Long orderId, Long driverId) {
+        Order order = find(orderId);
+        order.assignDriver(driverId);
+        return OrderResponse.from(orders.saveAndFlush(order));
+    }
+
+    /**
+     * Quando o pedido fica pronto, a corrida é aberta no delivery-service na mesma transação:
+     * se o serviço de entregas estiver fora, o status não muda e o restaurante tenta de novo.
+     */
+    private OrderResponse transition(AuthenticatedUser user, Long orderId, OrderStatus target, Long actorId,
+                                     String reason) {
         Order order = find(orderId);
         policy.checkCanTransition(user, order, target);
-        order.transitionTo(target, user.id(), reason, clock.instant());
-        return OrderResponse.from(orders.saveAndFlush(order));
+        order.transitionTo(target, actorId, reason, clock.instant());
+        Order saved = orders.saveAndFlush(order);
+        if (target == OrderStatus.READY_FOR_PICKUP) {
+            deliveryGateway.requestDelivery(saved);
+        }
+        return OrderResponse.from(saved);
     }
 
     public OrderResponse cancel(AuthenticatedUser user, Long orderId, String reason) {
