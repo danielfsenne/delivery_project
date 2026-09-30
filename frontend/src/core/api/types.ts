@@ -38,6 +38,8 @@ export interface RestaurantSummary {
   district: string
   active: boolean
   open: boolean
+  ratingAverage: number | null
+  ratingCount: number
 }
 
 export interface ProductOption {
@@ -91,6 +93,8 @@ export interface Cart {
   total: number
   minOrderValue: number
   reachesMinimumOrder: boolean
+  couponCode: string | null
+  couponError: string | null
 }
 
 export type OrderStatus =
@@ -149,9 +153,80 @@ export interface Order {
   deliveryFee: number
   discount: number
   total: number
+  couponCode: string | null
   notes: string | null
   deliveryAddress: Address
   history: OrderHistoryEntry[]
   createdAt: string
   updatedAt: string
+}
+
+export interface Review {
+  orderId: number
+  restaurantId: number
+  foodRating: number
+  deliveryRating: number | null
+  comment: string | null
+  createdAt: string
+}
+
+export interface RestaurantStats {
+  ordersToday: number
+  revenueToday: number
+  averageTicket: number
+  cancelledToday: number
+  inProgress: number
+}
+
+export type DriverStatus = 'ONLINE' | 'OFFLINE' | 'BUSY'
+export type DeliveryStatus = 'WAITING_DRIVER' | 'ASSIGNED' | 'PICKED_UP' | 'DELIVERED'
+
+export interface Coordinates {
+  latitude: number
+  longitude: number
+}
+
+export interface Delivery {
+  id: number
+  orderId: number
+  restaurantId: number
+  restaurantName: string
+  pickupAddress: string | null
+  pickup: Coordinates | null
+  dropoffAddress: string
+  dropoff: Coordinates | null
+  driverFee: number
+  status: DeliveryStatus
+  driverId: number | null
+  distanceToPickupKm: number | null
+  tripDistanceKm: number | null
+  createdAt: string
+  acceptedAt: string | null
+  pickedUpAt: string | null
+  deliveredAt: string | null
+}
+
+export interface DriverProfile {
+  id: number
+  status: DriverStatus
+  location: Coordinates | null
+  locationUpdatedAt: string | null
+  currentDelivery: Delivery | null
+  completedDeliveries: number
+  totalEarnings: number
+}
+
+export interface DeliveryHistory {
+  completedDeliveries: number
+  totalEarnings: number
+  deliveries: Delivery[]
+}
+
+export interface Tracking {
+  orderId: number
+  status: DeliveryStatus
+  driverLocation: Coordinates | null
+  driverLocationUpdatedAt: string | null
+  pickup: Coordinates | null
+  dropoff: Coordinates | null
 }

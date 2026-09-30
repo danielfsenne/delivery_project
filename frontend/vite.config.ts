@@ -18,6 +18,8 @@ export default defineConfig({
       '/api/restaurants': { target: 'http://localhost:8182', rewrite: stripApi },
       '/api/cart': { target: 'http://localhost:8183', rewrite: stripApi },
       '/api/orders': { target: 'http://localhost:8183', rewrite: stripApi },
+      '/api/payments': { target: 'http://localhost:8184', rewrite: stripApi },
+      '/api/deliveries': { target: 'http://localhost:8185', rewrite: stripApi },
     },
   },
   test: {
