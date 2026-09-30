@@ -2,12 +2,13 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Banknote, CreditCard, QrCode } from 'lucide-react'
+import { useState } from 'react'
+import { Banknote, CreditCard, LocateFixed, QrCode } from 'lucide-react'
 import { useCart } from '@/features/cart/api'
 import { CartSummary } from '@/features/cart/CartSummary'
 import { useCheckout } from '@/features/orders/api'
 import { toApiError } from '@/core/api/client'
-import type { PaymentMethod } from '@/core/api/types'
+import type { Coordinates, PaymentMethod } from '@/core/api/types'
 import { Button, Card, ErrorMessage, Input, Spinner } from '@/shared/components/ui'
 import { cn } from '@/shared/lib/format'
 
@@ -35,6 +36,29 @@ export function CheckoutPage() {
   const navigate = useNavigate()
   const { data: cart, isLoading } = useCart()
   const checkout = useCheckout()
+  const [coords, setCoords] = useState<Coordinates | null>(null)
+  const [locating, setLocating] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
+
+  const locate = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Seu navegador não permite obter a localização')
+      return
+    }
+    setLocating(true)
+    setLocationError(null)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+        setLocating(false)
+      },
+      () => {
+        setLocationError('Não foi possível obter sua localização')
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    )
+  }
 
   const { register, handleSubmit, watch, setValue, formState } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -49,7 +73,7 @@ export function CheckoutPage() {
 
   const onSubmit = ({ paymentMethod, notes, ...address }: FormData) =>
     checkout.mutate(
-      { deliveryAddress: address, paymentMethod, notes: notes || undefined },
+      { deliveryAddress: { ...address, ...coords }, paymentMethod, notes: notes || undefined },
       { onSuccess: (order) => navigate(`/orders/${order.id}`, { replace: true }) },
     )
 
@@ -59,7 +83,18 @@ export function CheckoutPage() {
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="space-y-6">
         <Card className="p-5">
-          <h1 className="text-xl font-bold">Endereço de entrega</h1>
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-xl font-bold">Endereço de entrega</h1>
+            <Button type="button" variant="ghost" onClick={locate} loading={locating}>
+              <LocateFixed size={16} /> {coords ? 'Localização obtida' : 'Usar minha localização'}
+            </Button>
+          </div>
+          {locationError && <p className="mt-1 text-xs text-amber-700">{locationError}</p>}
+          {coords && (
+            <p className="mt-1 text-xs text-gray-500">
+              O entregador verá a distância até você ({coords.latitude.toFixed(4)}, {coords.longitude.toFixed(4)}).
+            </p>
+          )}
           <div className="mt-4 grid gap-4 sm:grid-cols-6">
             <Input className="sm:col-span-4" label="Rua" {...register('street')} error={e.street?.message} />
             <Input className="sm:col-span-2" label="Número" {...register('number')} error={e.number?.message} />
