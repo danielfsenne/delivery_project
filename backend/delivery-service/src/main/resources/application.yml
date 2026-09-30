@@ -1,0 +1,43 @@
+server:
+  port: 8185
+
+spring:
+  application:
+    name: delivery-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/delivery_db
+    username: ${DB_USER:rota}
+    password: ${DB_PASSWORD:rota}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  web:
+    locale: pt_BR
+    locale-resolver: fixed
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 2000
+            read-timeout: 5000
+
+rota:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-me-please-32-bytes-min}
+  delivery:
+    # Raio máximo (km) entre o entregador e o restaurante para oferecer uma entrega.
+    search-radius-km: 15
+    # Ganho mínimo do entregador por corrida, mesmo quando a entrega é grátis para o cliente.
+    min-driver-fee: 5.00
+  clients:
+    order-url: ${ORDER_SERVICE_URL:http://localhost:8183}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
