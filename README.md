@@ -30,7 +30,9 @@ backend/
   common/               exceções, tratamento de erros e JWT compartilhados
   auth-service/         cadastro, login, JWT e refresh token          :8181  auth_db
   restaurant-service/   restaurantes, cardápio, horários e cotação     :8182  restaurant_db
-  order-service/        carrinho (Redis) e pedidos                     :8183  order_db
+  order-service/        carrinho (Redis), pedidos, cupons e avaliações :8183  order_db
+  payment-service/      pagamentos (Strategy: fake e dinheiro)         :8184  payment_db
+  delivery-service/     entregadores e corridas                        :8185  delivery_db
 frontend/               aplicação React                                :5173
 infra/                  scripts de infraestrutura
 ```
@@ -65,11 +67,34 @@ Contas de demonstração (senha `rota12345`):
 | entregador@rota.dev | Entregador |
 | admin@rota.dev | Administrador |
 
+Para testar:
+
+- **Cliente**: cupons `SAVE10` (10%, mín. R$ 50), `BEMVINDO` (R$ 15, mín. R$ 40) e `PIZZA20` (só no Forno da Nonna).
+- **Pagamento fake**: Pix sempre aprovado; cartão recusado acima de R$ 500; dinheiro é confirmado na hora.
+- **Restaurante**: em `/partner`, aceite o pedido, inicie o preparo e marque como pronto. Isso abre a corrida.
+- **Entregador**: em `/driver`, fique online, use a posição de demonstração e aceite a entrega.
+
 Testes do backend (sem JDK local):
 
 ```bash
 ./backend/mvn-docker.sh verify
 ```
+
+## Fluxo de um pedido
+
+```
+Cliente          order-service         payment-service     restaurant-service    delivery-service
+   | checkout ------>| recota itens ------------------------------>|                       |
+   |                 | aplica cupom                                 |                       |
+   |                 | cobra ------------->| PaymentProvider        |                       |
+   |                 |<---- aprovado ------|                        |                       |
+Restaurante  aceita/prepara/pronto ->| abre corrida ------------------------------------------>|
+Entregador                           |<-- atribui entregador / saiu / entregue ----------------|
+Cliente      avalia ---------------->| nota do restaurante ------------------------>|           |
+```
+
+Chamadas entre serviços usam OpenFeign com um **token de serviço** (papel `SERVICE`) nos endpoints `/internal/**`.
+Na Fase 3 essas integrações passam a ser eventos no RabbitMQ.
 
 ## Destaques
 
@@ -78,11 +103,14 @@ Testes do backend (sem JDK local):
 - **Preço sempre vem do catálogo**: carrinho e checkout recotam os itens no restaurant-service; valores enviados pelo cliente são ignorados.
 - **Refresh token com rotação** e detecção de reuso (revoga todas as sessões do usuário).
 - **Autorização por perfil e por dono**: restaurante só vê e altera pedidos do próprio restaurante; cliente só cancela antes do aceite.
+- **Pagamento com Strategy**: `PaymentProvider` com implementações trocáveis por configuração; cobrança idempotente por pedido.
+- **Cupons**: validade, pedido mínimo, teto de desconto, limite de uso com incremento atômico e restrição por restaurante.
+- **Entregas**: busca por entregadores próximos com Haversine, aceite concorrente protegido por lock otimista.
 
 ## Roadmap
 
 - [x] Fase 1 — MVP: Auth, Restaurant, Product, Cart, Order
-- [ ] Fase 2 — Negócio: Payment, Coupon, Rating, Delivery
+- [x] Fase 2 — Negócio: Payment, Coupon, Rating, Delivery
 - [ ] Fase 3 — Distribuído: RabbitMQ, Redis, WebSocket, Gateway, Eureka, Resilience4j
 - [ ] Fase 4 — Produção: Docker, CI/CD, Prometheus, Grafana, OpenTelemetry
 - [ ] Fase 5 — Qualidade: testes unitários e de integração, segurança, documentação
