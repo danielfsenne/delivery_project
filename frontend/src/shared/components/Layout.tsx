@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { LogOut, Receipt, ShoppingBag, User } from 'lucide-react'
+import { LogOut, Receipt, ShoppingBag, Store, User } from 'lucide-react'
 import { useAuthStore } from '@/core/auth/auth-store'
 import { useCart } from '@/features/cart/api'
 import { logout as logoutRequest } from '@/features/auth/api'
@@ -44,6 +44,11 @@ export function Layout() {
                   )}
                 </NavLink>
               </>
+            )}
+            {user?.role === 'RESTAURANT' && (
+              <NavLink to="/partner" className="flex items-center gap-1 hover:text-brand-600">
+                <Store size={18} /> <span className="hidden sm:inline">Painel</span>
+              </NavLink>
             )}
             {user ? (
               <>
