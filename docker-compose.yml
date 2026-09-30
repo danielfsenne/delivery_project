@@ -86,6 +86,7 @@ services:
       <<: *service-env
       RESTAURANT_SERVICE_URL: http://restaurant-service:8182
       PAYMENT_SERVICE_URL: http://payment-service:8184
+      DELIVERY_SERVICE_URL: http://delivery-service:8185
     ports:
       - "8183:8183"
     depends_on:
@@ -103,6 +104,21 @@ services:
     environment: *service-env
     ports:
       - "8184:8184"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  delivery-service:
+    build:
+      context: ./backend
+      args:
+        MODULE: delivery-service
+    container_name: rota-delivery
+    environment:
+      <<: *service-env
+      ORDER_SERVICE_URL: http://order-service:8183
+    ports:
+      - "8185:8185"
     depends_on:
       postgres:
         condition: service_healthy
