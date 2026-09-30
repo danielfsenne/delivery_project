@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import axios from 'axios'
 import { api } from '@/core/api/client'
-import type { Address, Order, OrderSummary, Page, PaymentMethod } from '@/core/api/types'
+import type { Address, Order, OrderSummary, Page, PaymentMethod, Review, Tracking } from '@/core/api/types'
 import { cartKey } from '@/features/cart/api'
 
 export interface CheckoutInput {
@@ -48,5 +49,55 @@ export function useCancelOrder(id: number) {
       queryClient.setQueryData(['order', id], order)
       queryClient.invalidateQueries({ queryKey: ['orders'] })
     },
+  })
+}
+
+/** Nova tentativa de pagamento, quando o serviço de pagamento estava indisponível. */
+export function usePayOrder(id: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => (await api.post<Order>(`/orders/${id}/pay`)).data,
+    onSuccess: (order) => queryClient.setQueryData(['order', id], order),
+  })
+}
+
+/** Avaliação do pedido; null quando ainda não foi avaliado. */
+export function useOrderReview(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['order', id, 'review'],
+    enabled,
+    queryFn: async () => {
+      try {
+        return (await api.get<Review>(`/orders/${id}/review`)).data
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 404) return null
+        throw error
+      }
+    },
+  })
+}
+
+export interface ReviewInput {
+  foodRating: number
+  deliveryRating?: number
+  comment?: string
+}
+
+export function useCreateReview(id: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: ReviewInput) => (await api.post<Review>(`/orders/${id}/review`, input)).data,
+    onSuccess: (review) => queryClient.setQueryData(['order', id, 'review'], review),
+  })
+}
+
+/** Posição do entregador enquanto o pedido está a caminho. */
+export function useTracking(orderId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['tracking', orderId],
+    enabled,
+    retry: false,
+    refetchInterval: 5_000,
+    queryFn: async () => (await api.get<Tracking>(`/deliveries/order/${orderId}`)).data,
   })
 }
