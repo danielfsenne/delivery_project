@@ -1,4 +1,4 @@
-package com.rota.order.infrastructure.client;
+package com.rota.common.feign;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,5 +1,6 @@
 package com.rota.order.infrastructure.client;
 
+import com.rota.common.feign.InternalFeignConfig;
 import com.rota.order.domain.PaymentMethod;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;

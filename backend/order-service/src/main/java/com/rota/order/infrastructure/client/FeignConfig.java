@@ -1,6 +1,7 @@
 package com.rota.order.infrastructure.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rota.common.feign.DomainErrorDecoder;
 import feign.RequestInterceptor;
 import feign.codec.ErrorDecoder;
 import org.springframework.context.annotation.Bean;
