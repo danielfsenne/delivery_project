@@ -10,6 +10,7 @@ import { CheckoutPage } from '@/features/checkout/CheckoutPage'
 import { OrdersPage } from '@/features/orders/OrdersPage'
 import { OrderDetailPage } from '@/features/orders/OrderDetailPage'
 import { PartnerPage } from '@/features/partner/PartnerPage'
+import { DriverPage } from '@/features/driver/DriverPage'
 
 export const router = createBrowserRouter([
   {
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
         element: <RequireRole roles={['CUSTOMER', 'RESTAURANT', 'DRIVER', 'ADMIN']}><OrderDetailPage /></RequireRole>,
       },
       { path: '/partner', element: <RequireRole roles={['RESTAURANT', 'ADMIN']}><PartnerPage /></RequireRole> },
+      { path: '/driver', element: <RequireRole roles={['DRIVER']}><DriverPage /></RequireRole> },
     ],
   },
 ])
