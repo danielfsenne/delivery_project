@@ -39,11 +39,52 @@ rota:
   cart:
     ttl: 2d
 
+# Chamadas síncronas para outros serviços. O timeout fica no Feign (acima); aqui,
+# retry com backoff para falhas passageiras e circuit breaker para falhas persistentes.
+# Só ServiceUnavailableException (rede, 5xx, serviço fora do Eureka) conta como falha.
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 15s
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-exceptions:
+          - com.rota.common.exception.ServiceUnavailableException
+        register-health-indicator: true
+    instances:
+      restaurant:
+        base-config: default
+      payment:
+        base-config: default
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - com.rota.common.exception.ServiceUnavailableException
+    instances:
+      restaurant:
+        base-config: default
+      payment:
+        base-config: default
+        max-attempts: 2
+
 management:
+  health:
+    circuitbreakers:
+      enabled: true
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,circuitbreakers,retries
 
 eureka:
   client:
