@@ -4,12 +4,37 @@ server:
 spring:
   application:
     name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   cloud:
     gateway:
       server:
         webflux:
+          # Token bucket no Redis: 20 req/s por usuário (ou IP), com picos de até 40.
+          default-filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@userOrIpKeyResolver}"
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
           # O front chama /api/<recurso>/...; o prefixo /api é removido antes de repassar.
           routes:
+            # Cada tentativa custa 6 fichas de um balde de 60 que enche 1 por segundo:
+            # 10 tentativas seguidas e depois 1 a cada 6 s (10 por minuto) por IP.
+            - id: auth-login
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/auth/login,/api/auth/register
+              filters:
+                - StripPrefix=1
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@loginKeyResolver}"
+                    redis-rate-limiter.replenishRate: 1
+                    redis-rate-limiter.burstCapacity: 60
+                    redis-rate-limiter.requestedTokens: 6
             - id: auth
               uri: lb://auth-service
               predicates:
