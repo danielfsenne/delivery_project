@@ -78,6 +78,22 @@ services:
       retries: 12
       start_period: 20s
 
+  api-gateway:
+    <<: *java-service
+    build:
+      context: ./backend
+      args:
+        MODULE: api-gateway
+    container_name: rota-gateway
+    environment: *service-env
+    ports:
+      - "8080:8080"
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   auth-service:
     <<: *java-service
     build:
