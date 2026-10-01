@@ -1,5 +1,20 @@
 name: rota
 
+# Base comum dos serviços Java. Limite de memória por container e JVM enxuta
+# (SerialGC, só o compilador C1) para a stack inteira caber numa máquina de desenvolvimento.
+x-java-service: &java-service
+  mem_limit: 448m
+  restart: unless-stopped
+
+x-service-env: &service-env
+  DB_HOST: postgres
+  DB_USER: ${POSTGRES_USER:-rota}
+  DB_PASSWORD: ${POSTGRES_PASSWORD:-rota}
+  REDIS_HOST: redis
+  RABBITMQ_HOST: rabbitmq
+  JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-please-32-bytes-min}
+  JAVA_OPTS: -XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -45,18 +60,13 @@ services:
       retries: 10
 
   auth-service:
+    <<: *java-service
     build:
       context: ./backend
       args:
         MODULE: auth-service
     container_name: rota-auth
-    environment: &service-env
-      DB_HOST: postgres
-      DB_USER: ${POSTGRES_USER:-rota}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-rota}
-      REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
-      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-please-32-bytes-min}
+    environment: *service-env
     ports:
       - "8181:8181"
     depends_on:
@@ -64,6 +74,7 @@ services:
         condition: service_healthy
 
   restaurant-service:
+    <<: *java-service
     build:
       context: ./backend
       args:
@@ -77,6 +88,7 @@ services:
         condition: service_healthy
 
   order-service:
+    <<: *java-service
     build:
       context: ./backend
       args:
@@ -96,6 +108,7 @@ services:
         condition: service_healthy
 
   payment-service:
+    <<: *java-service
     build:
       context: ./backend
       args:
@@ -109,6 +122,7 @@ services:
         condition: service_healthy
 
   delivery-service:
+    <<: *java-service
     build:
       context: ./backend
       args:
