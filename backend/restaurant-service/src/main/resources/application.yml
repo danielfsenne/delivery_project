@@ -17,6 +17,10 @@ spring:
         default_batch_fetch_size: 50
   flyway:
     enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   web:
     locale: pt_BR
     locale-resolver: fixed
@@ -25,6 +29,8 @@ rota:
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-please-32-bytes-min}
   timezone: America/Sao_Paulo
+  cache:
+    catalog-ttl: 60s
 
 management:
   endpoints:

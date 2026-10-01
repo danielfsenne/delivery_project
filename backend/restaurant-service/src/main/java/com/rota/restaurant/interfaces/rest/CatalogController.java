@@ -40,7 +40,7 @@ public class CatalogController {
             @RequestParam(required = false) String cuisine,
             @RequestParam(required = false) String q,
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return catalog.search(city, cuisine, q, pageable);
+        return catalog.search(city, cuisine, q, pageable).toPage(pageable);
     }
 
     @GetMapping("/{id}")

@@ -2,6 +2,7 @@ package com.rota.restaurant.application;
 
 import com.rota.common.exception.BusinessException;
 import com.rota.common.exception.NotFoundException;
+import com.rota.restaurant.application.cache.EvictsRestaurantCache;
 import com.rota.restaurant.domain.RestaurantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ public class RatingService {
     }
 
     @Transactional
+    @EvictsRestaurantCache
     public void addRating(Long restaurantId, int score) {
         if (score < 1 || score > 5) {
             throw new BusinessException("A nota deve ser de 1 a 5");
