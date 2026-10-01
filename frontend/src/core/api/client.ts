@@ -47,13 +47,22 @@ export interface ApiError {
   fields?: Record<string, string>
 }
 
+/** Respostas do gateway que chegam sem corpo JSON. */
+const statusMessages: Record<number, string> = {
+  429: 'Muitas requisições em pouco tempo. Aguarde alguns segundos e tente de novo.',
+  502: 'Serviço indisponível no momento. Tente novamente em instantes.',
+  503: 'Serviço indisponível no momento. Tente novamente em instantes.',
+  504: 'O serviço demorou para responder. Tente novamente.',
+}
+
 export function toApiError(error: unknown): ApiError {
-  if (axios.isAxiosError(error) && error.response?.data) {
-    const data = error.response.data as Partial<ApiError>
+  if (axios.isAxiosError(error) && error.response) {
+    const { status } = error.response
+    const data = (typeof error.response.data === 'object' ? error.response.data : null) as Partial<ApiError> | null
     return {
-      status: error.response.status,
-      message: data.message ?? 'Erro inesperado',
-      fields: data.fields,
+      status,
+      message: data?.message ?? statusMessages[status] ?? 'Erro inesperado',
+      fields: data?.fields,
     }
   }
   return { status: 0, message: 'Não foi possível conectar ao servidor' }
