@@ -3,7 +3,6 @@ package com.rota.delivery.interfaces.rest;
 import com.rota.common.security.AuthenticatedUser;
 import com.rota.delivery.application.DeliveryService;
 import com.rota.delivery.application.DriverService;
-import com.rota.delivery.interfaces.rest.dto.DeliveryDtos.CreateDeliveryRequest;
 import com.rota.delivery.interfaces.rest.dto.DeliveryDtos.DeliveryResponse;
 import com.rota.delivery.interfaces.rest.dto.DeliveryDtos.DriverResponse;
 import com.rota.delivery.interfaces.rest.dto.DeliveryDtos.HistoryResponse;
@@ -81,12 +80,5 @@ public class DeliveryController {
     @GetMapping("/deliveries/order/{orderId}")
     public TrackingResponse track(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long orderId) {
         return deliveryService.track(user, orderId);
-    }
-
-    // --- Interno (order-service) ---------------------------------------------
-
-    @PostMapping("/internal/deliveries")
-    public DeliveryResponse create(@Valid @RequestBody CreateDeliveryRequest request) {
-        return deliveryService.create(request);
     }
 }
