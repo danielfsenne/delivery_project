@@ -4,7 +4,6 @@ import com.rota.common.exception.ConflictException;
 import com.rota.common.exception.ServiceUnavailableException;
 import com.rota.common.security.AuthenticatedUser;
 import com.rota.common.security.Role;
-import com.rota.order.application.port.DeliveryGateway;
 import com.rota.order.application.port.PaymentGateway;
 import com.rota.order.application.port.PaymentGateway.PaymentOutcome;
 import com.rota.order.domain.Order;
@@ -33,8 +32,7 @@ class PaymentOrchestratorTest {
 
     private final OrderRepository orders = mock(OrderRepository.class);
     private final PaymentGateway gateway = mock(PaymentGateway.class);
-    private final OrderService orderService = new OrderService(orders, new OrderAccessPolicy(),
-            mock(DeliveryGateway.class), Clock.systemUTC());
+    private final OrderService orderService = new OrderService(orders, new OrderAccessPolicy(), Clock.systemUTC());
     private final PaymentOrchestrator orchestrator = new PaymentOrchestrator(orderService, gateway);
     private final AuthenticatedUser customer = new AuthenticatedUser(1L, "c@rota.dev", Role.CUSTOMER);
 

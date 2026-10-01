@@ -3,7 +3,6 @@ package com.rota.order.application;
 import com.rota.common.exception.ConflictException;
 import com.rota.common.exception.NotFoundException;
 import com.rota.common.security.AuthenticatedUser;
-import com.rota.order.application.port.DeliveryGateway;
 import com.rota.order.application.port.PaymentGateway.PaymentOutcome;
 import com.rota.order.domain.Order;
 import com.rota.order.domain.OrderRepository;
@@ -29,16 +28,15 @@ import java.util.EnumSet;
 @Transactional
 public class OrderService {
 
+    private static final AuthenticatedUser DELIVERY_SERVICE = AuthenticatedUser.service("delivery-service");
+
     private final OrderRepository orders;
     private final OrderAccessPolicy policy;
-    private final DeliveryGateway deliveryGateway;
     private final Clock clock;
 
-    public OrderService(OrderRepository orders, OrderAccessPolicy policy, DeliveryGateway deliveryGateway,
-                        Clock clock) {
+    public OrderService(OrderRepository orders, OrderAccessPolicy policy, Clock clock) {
         this.orders = orders;
         this.policy = policy;
-        this.deliveryGateway = deliveryGateway;
         this.clock = clock;
     }
 
@@ -72,34 +70,33 @@ public class OrderService {
         return transition(user, orderId, target, user.id(), reason);
     }
 
-    /**
-     * Mudança feita por outro serviço em nome de um usuário (ex.: entregador via delivery-service).
-     */
-    public OrderResponse changeStatusOnBehalf(AuthenticatedUser service, Long orderId, OrderStatus target,
-                                              Long actorId) {
-        return transition(service, orderId, target, actorId, null);
-    }
-
-    public OrderResponse assignDriver(Long orderId, Long driverId) {
+    public void assignDriver(Long orderId, Long driverId) {
         Order order = find(orderId);
         order.assignDriver(driverId);
-        return OrderResponse.from(orders.saveAndFlush(order));
+        orders.saveAndFlush(order);
     }
 
     /**
-     * Quando o pedido fica pronto, a corrida é aberta no delivery-service na mesma transação:
-     * se o serviço de entregas estiver fora, o status não muda e o restaurante tenta de novo.
+     * Avanço informado pelo delivery-service (retirada e entrega). Idempotente: se o pedido
+     * já está no status, nada muda. O histórico registra o entregador como autor.
+     */
+    public void advanceByDelivery(Long orderId, OrderStatus target, Long driverId) {
+        if (find(orderId).getStatus() == target) {
+            return;
+        }
+        transition(DELIVERY_SERVICE, orderId, target, driverId, null);
+    }
+
+    /**
+     * A abertura da corrida (pedido pronto) e as notificações saem como eventos, gravados no
+     * outbox na mesma transação: nenhuma chamada a outro serviço segura esta mudança.
      */
     private OrderResponse transition(AuthenticatedUser user, Long orderId, OrderStatus target, Long actorId,
                                      String reason) {
         Order order = find(orderId);
         policy.checkCanTransition(user, order, target);
         order.transitionTo(target, actorId, reason, clock.instant());
-        Order saved = orders.saveAndFlush(order);
-        if (target == OrderStatus.READY_FOR_PICKUP) {
-            deliveryGateway.requestDelivery(saved);
-        }
-        return OrderResponse.from(saved);
+        return OrderResponse.from(orders.saveAndFlush(order));
     }
 
     public OrderResponse cancel(AuthenticatedUser user, Long orderId, String reason) {
