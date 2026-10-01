@@ -1,12 +1,14 @@
 package com.rota.delivery.application;
 
+import com.rota.common.events.DeliveryStatusChanged;
+import com.rota.common.events.RotaEvents;
 import com.rota.common.exception.BusinessException;
 import com.rota.common.exception.ConflictException;
 import com.rota.common.exception.ForbiddenException;
 import com.rota.common.exception.NotFoundException;
+import com.rota.common.messaging.EventPublisher;
 import com.rota.common.security.AuthenticatedUser;
 import com.rota.common.security.Role;
-import com.rota.delivery.application.port.OrderGateway;
 import com.rota.delivery.domain.Delivery;
 import com.rota.delivery.domain.DeliveryRepository;
 import com.rota.delivery.domain.DeliveryStatus;
@@ -26,11 +28,12 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 /**
- * Ciclo de vida das corridas. Cada passo do entregador também avança o pedido no
- * order-service dentro da mesma transação: se a chamada falhar, a corrida não muda
- * e o entregador pode tentar novamente.
+ * Ciclo de vida das corridas. Cada passo publica {@code delivery.status-changed} pelo outbox,
+ * na mesma transação: o order-service acompanha a corrida pelos eventos, sem que o entregador
+ * dependa dele estar no ar para aceitar, retirar ou entregar.
  */
 @Service
 @Transactional
@@ -38,35 +41,39 @@ public class DeliveryService {
 
     private final DeliveryRepository deliveries;
     private final DriverService drivers;
-    private final OrderGateway orderGateway;
+    private final EventPublisher events;
     private final Clock clock;
     private final double searchRadiusKm;
     private final BigDecimal minDriverFee;
 
-    public DeliveryService(DeliveryRepository deliveries, DriverService drivers, OrderGateway orderGateway,
+    public DeliveryService(DeliveryRepository deliveries, DriverService drivers, EventPublisher events,
                            Clock clock,
                            @Value("${rota.delivery.search-radius-km:15}") double searchRadiusKm,
                            @Value("${rota.delivery.min-driver-fee:5.00}") BigDecimal minDriverFee) {
         this.deliveries = deliveries;
         this.drivers = drivers;
-        this.orderGateway = orderGateway;
+        this.events = events;
         this.clock = clock;
         this.searchRadiusKm = searchRadiusKm;
         this.minDriverFee = minDriverFee;
     }
 
     /**
-     * Idempotente por pedido: reenviar a mesma solicitação devolve a corrida existente.
+     * Idempotente por pedido: um evento reentregue devolve a corrida existente sem publicar de novo.
      */
     public DeliveryResponse create(CreateDeliveryRequest request) {
-        Delivery delivery = deliveries.findByOrderId(request.orderId()).orElseGet(() -> deliveries.save(
-                new Delivery(request.orderId(), request.customerId(), request.restaurantId(),
-                        request.restaurantName(), request.pickupAddress(),
-                        GeoPoint.ofNullable(request.pickupLatitude(), request.pickupLongitude()),
-                        request.dropoffAddress(),
-                        GeoPoint.ofNullable(request.dropoffLatitude(), request.dropoffLongitude()),
-                        request.deliveryFee().max(minDriverFee), clock.instant())));
-        return DeliveryResponse.from(delivery, null);
+        return deliveries.findByOrderId(request.orderId())
+                .map(existing -> DeliveryResponse.from(existing, null))
+                .orElseGet(() -> {
+                    Delivery delivery = deliveries.save(new Delivery(request.orderId(), request.customerId(),
+                            request.restaurantId(), request.restaurantName(), request.pickupAddress(),
+                            GeoPoint.ofNullable(request.pickupLatitude(), request.pickupLongitude()),
+                            request.dropoffAddress(),
+                            GeoPoint.ofNullable(request.dropoffLatitude(), request.dropoffLongitude()),
+                            request.deliveryFee().max(minDriverFee), clock.instant()));
+                    publishStatus(delivery);
+                    return DeliveryResponse.from(delivery, null);
+                });
     }
 
     /**
@@ -101,7 +108,7 @@ public class DeliveryService {
         } catch (ObjectOptimisticLockingFailureException e) {
             throw new ConflictException("Esta entrega acabou de ser aceita por outro entregador");
         }
-        orderGateway.assignDriver(delivery.getOrderId(), driverId);
+        publishStatus(delivery);
         return DeliveryResponse.from(delivery, driver.location());
     }
 
@@ -109,7 +116,7 @@ public class DeliveryService {
         Driver driver = drivers.getOrCreate(driverId);
         Delivery delivery = find(deliveryId);
         delivery.pickUp(driver, clock.instant());
-        orderGateway.markOutForDelivery(delivery.getOrderId(), driverId);
+        publishStatus(delivery);
         return DeliveryResponse.from(delivery, driver.location());
     }
 
@@ -117,7 +124,7 @@ public class DeliveryService {
         Driver driver = drivers.getOrCreate(driverId);
         Delivery delivery = find(deliveryId);
         delivery.complete(driver, clock.instant());
-        orderGateway.markDelivered(delivery.getOrderId(), driverId);
+        publishStatus(delivery);
         return DeliveryResponse.from(delivery, driver.location());
     }
 
@@ -143,6 +150,13 @@ public class DeliveryService {
             throw new ForbiddenException("Você não tem acesso a esta entrega");
         }
         return TrackingResponse.from(delivery);
+    }
+
+    private void publishStatus(Delivery delivery) {
+        Long driverId = delivery.getDriver() == null ? null : delivery.getDriver().getId();
+        events.publish(RotaEvents.DELIVERY_STATUS_CHANGED, new DeliveryStatusChanged(UUID.randomUUID(),
+                delivery.getId(), delivery.getOrderId(), delivery.getCustomerId(), driverId,
+                delivery.getStatus().name(), clock.instant()));
     }
 
     private Delivery find(Long deliveryId) {

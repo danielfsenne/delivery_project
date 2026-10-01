@@ -1,12 +1,15 @@
 package com.rota.delivery.application;
 
+import com.rota.common.events.DeliveryStatusChanged;
+import com.rota.common.events.IntegrationEvent;
+import com.rota.common.events.RotaEvents;
 import com.rota.common.exception.BusinessException;
 import com.rota.common.exception.ConflictException;
 import com.rota.common.exception.ForbiddenException;
-import com.rota.common.exception.ServiceUnavailableException;
+import com.rota.common.messaging.EventPublisher;
 import com.rota.common.security.AuthenticatedUser;
 import com.rota.common.security.Role;
-import com.rota.delivery.application.port.OrderGateway;
+import com.rota.delivery.application.port.LocationBroadcaster;
 import com.rota.delivery.domain.Delivery;
 import com.rota.delivery.domain.DeliveryRepository;
 import com.rota.delivery.domain.DeliveryStatus;
@@ -17,6 +20,7 @@ import com.rota.delivery.interfaces.rest.dto.DeliveryDtos.CreateDeliveryRequest;
 import com.rota.delivery.interfaces.rest.dto.DeliveryDtos.DeliveryResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -29,8 +33,10 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -42,10 +48,11 @@ class DeliveryServiceTest {
 
     private final DeliveryRepository deliveries = mock(DeliveryRepository.class);
     private final DriverRepository driverRepository = mock(DriverRepository.class);
-    private final OrderGateway orderGateway = mock(OrderGateway.class);
+    private final EventPublisher events = mock(EventPublisher.class);
+    private final LocationBroadcaster locations = mock(LocationBroadcaster.class);
     private final Clock clock = Clock.systemUTC();
-    private final DriverService drivers = new DriverService(driverRepository, deliveries, clock);
-    private final DeliveryService service = new DeliveryService(deliveries, drivers, orderGateway, clock, 15,
+    private final DriverService drivers = new DriverService(driverRepository, deliveries, locations, clock);
+    private final DeliveryService service = new DeliveryService(deliveries, drivers, events, clock, 15,
             new BigDecimal("5.00"));
 
     private Driver driver;
@@ -78,6 +85,8 @@ class DeliveryServiceTest {
         Delivery existing = delivery(7L, 100L, null);
         when(deliveries.findByOrderId(100L)).thenReturn(Optional.of(existing));
         assertThat(service.create(request).id()).isEqualTo(7L);
+
+        assertThat(publishedStatuses()).containsExactly("WAITING_DRIVER");
     }
 
     @Test
@@ -101,14 +110,17 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void acceptAssignsDriverAndNotifiesOrder() {
+    void acceptAssignsDriverAndPublishesEvent() {
         Delivery d = delivery(1L, 101L, null);
         when(deliveries.findById(1L)).thenReturn(Optional.of(d));
 
         service.accept(3L, 1L);
 
         assertThat(d.getStatus()).isEqualTo(DeliveryStatus.ASSIGNED);
-        verify(orderGateway).assignDriver(101L, 3L);
+        DeliveryStatusChanged event = (DeliveryStatusChanged) publishedEvents().getFirst();
+        assertThat(event.status()).isEqualTo("ASSIGNED");
+        assertThat(event.orderId()).isEqualTo(101L);
+        assertThat(event.driverId()).isEqualTo(3L);
     }
 
     @Test
@@ -124,29 +136,42 @@ class DeliveryServiceTest {
         when(deliveries.saveAndFlush(any())).thenThrow(new ObjectOptimisticLockingFailureException(Delivery.class, 1L));
 
         assertThatThrownBy(() -> service.accept(3L, 1L)).isInstanceOf(ConflictException.class);
-        verify(orderGateway, never()).assignDriver(any(), any());
+        verify(events, never()).publish(any(), any());
     }
 
     @Test
-    void orderServiceFailurePropagatesToRollBack() {
-        when(deliveries.findById(1L)).thenReturn(Optional.of(delivery(1L, 101L, null)));
-        doThrow(new ServiceUnavailableException("fora", null)).when(orderGateway).assignDriver(any(), any());
-
-        assertThatThrownBy(() -> service.accept(3L, 1L)).isInstanceOf(ServiceUnavailableException.class);
-    }
-
-    @Test
-    void pickupAndCompleteAdvanceOrder() {
+    void eachStepPublishesStatusInOrder() {
         Delivery d = delivery(1L, 101L, null);
         when(deliveries.findById(1L)).thenReturn(Optional.of(d));
+
         service.accept(3L, 1L);
-
         service.pickUp(3L, 1L);
-        verify(orderGateway).markOutForDelivery(101L, 3L);
-
         service.complete(3L, 1L);
-        verify(orderGateway).markDelivered(101L, 3L);
+
         assertThat(d.getStatus()).isEqualTo(DeliveryStatus.DELIVERED);
+        assertThat(publishedStatuses()).containsExactly("ASSIGNED", "PICKED_UP", "DELIVERED");
+    }
+
+    @Test
+    void locationIsBroadcastOnlyDuringADelivery() {
+        drivers.updateLocation(3L, -20.53, -47.40);
+        verify(locations, never()).driverMoved(any(), any(), any(), anyDouble(), anyDouble());
+
+        Delivery active = delivery(1L, 101L, null);
+        when(deliveries.findFirstByDriverIdAndStatusIn(eq(3L), any())).thenReturn(Optional.of(active));
+        drivers.updateLocation(3L, -20.54, -47.41);
+
+        verify(locations).driverMoved(3L, 101L, 1L, -20.54, -47.41);
+    }
+
+    private List<IntegrationEvent> publishedEvents() {
+        ArgumentCaptor<IntegrationEvent> captor = ArgumentCaptor.forClass(IntegrationEvent.class);
+        verify(events, atLeastOnce()).publish(eq(RotaEvents.DELIVERY_STATUS_CHANGED), captor.capture());
+        return captor.getAllValues();
+    }
+
+    private List<String> publishedStatuses() {
+        return publishedEvents().stream().map(e -> ((DeliveryStatusChanged) e).status()).toList();
     }
 
     @Test

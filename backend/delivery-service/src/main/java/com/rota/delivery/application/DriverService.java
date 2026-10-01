@@ -1,6 +1,7 @@
 package com.rota.delivery.application;
 
 import com.rota.common.exception.BusinessException;
+import com.rota.delivery.application.port.LocationBroadcaster;
 import com.rota.delivery.domain.Delivery;
 import com.rota.delivery.domain.DeliveryRepository;
 import com.rota.delivery.domain.DeliveryStatus;
@@ -26,11 +27,14 @@ public class DriverService {
 
     private final DriverRepository drivers;
     private final DeliveryRepository deliveries;
+    private final LocationBroadcaster locationBroadcaster;
     private final Clock clock;
 
-    public DriverService(DriverRepository drivers, DeliveryRepository deliveries, Clock clock) {
+    public DriverService(DriverRepository drivers, DeliveryRepository deliveries,
+                         LocationBroadcaster locationBroadcaster, Clock clock) {
         this.drivers = drivers;
         this.deliveries = deliveries;
+        this.locationBroadcaster = locationBroadcaster;
         this.clock = clock;
     }
 
@@ -48,9 +52,15 @@ public class DriverService {
         return view(driver);
     }
 
+    /**
+     * Durante uma entrega, a nova posição também é repassada ao cliente que acompanha o pedido.
+     */
     public DriverResponse updateLocation(Long driverId, double latitude, double longitude) {
         Driver driver = getOrCreate(driverId);
         driver.moveTo(new GeoPoint(latitude, longitude), clock.instant());
+        deliveries.findFirstByDriverIdAndStatusIn(driverId, ACTIVE).ifPresent(delivery ->
+                locationBroadcaster.driverMoved(driverId, delivery.getOrderId(), delivery.getCustomerId(),
+                        latitude, longitude));
         return view(driver);
     }
 

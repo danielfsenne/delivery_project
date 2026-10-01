@@ -14,20 +14,29 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    username: ${RABBITMQ_USER:rota}
+    password: ${RABBITMQ_PASSWORD:rota}
+    publisher-confirm-type: correlated
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 4
+          initial-interval: 500ms
+          multiplier: 2
   web:
     locale: pt_BR
     locale-resolver: fixed
-  cloud:
-    openfeign:
-      client:
-        config:
-          default:
-            connect-timeout: 2000
-            read-timeout: 5000
 
 rota:
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-please-32-bytes-min}
+  messaging:
+    outbox:
+      enabled: true
   delivery:
     # Raio máximo (km) entre o entregador e o restaurante para oferecer uma entrega.
     search-radius-km: 15
