@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "restaurant-service-internal", url = "${rota.clients.restaurant-url}",
+@FeignClient(name = "restaurant-service", contextId = "restaurantInternal",
         configuration = InternalFeignConfig.class)
 public interface RestaurantInternalFeignClient {
 

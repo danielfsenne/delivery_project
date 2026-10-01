@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "order-service", url = "${rota.clients.order-url}", configuration = InternalFeignConfig.class)
+@FeignClient(name = "order-service", configuration = InternalFeignConfig.class)
 public interface OrderFeignClient {
 
     @PostMapping("/internal/orders/{id}/driver")

@@ -33,11 +33,18 @@ rota:
     search-radius-km: 15
     # Ganho mínimo do entregador por corrida, mesmo quando a entrega é grátis para o cliente.
     min-driver-fee: 5.00
-  clients:
-    order-url: ${ORDER_SERVICE_URL:http://localhost:8183}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    registry-fetch-interval-seconds: 10
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10

@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
-@FeignClient(name = "restaurant-service", url = "${rota.clients.restaurant-url}",
+@FeignClient(name = "restaurant-service",
         configuration = FeignConfig.class)
 public interface RestaurantFeignClient {
 

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.math.BigDecimal;
 
-@FeignClient(name = "payment-service", url = "${rota.clients.payment-url}", configuration = InternalFeignConfig.class)
+@FeignClient(name = "payment-service", configuration = InternalFeignConfig.class)
 public interface PaymentFeignClient {
 
     @PostMapping("/internal/payments")

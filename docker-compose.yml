@@ -13,6 +13,7 @@ x-service-env: &service-env
   REDIS_HOST: redis
   RABBITMQ_HOST: rabbitmq
   JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-please-32-bytes-min}
+  EUREKA_URL: http://discovery-server:8761/eureka
   JAVA_OPTS: -XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k
 
 services:
@@ -88,6 +89,8 @@ services:
     ports:
       - "8181:8181"
     depends_on:
+      discovery-server:
+        condition: service_healthy
       postgres:
         condition: service_healthy
 
@@ -102,6 +105,8 @@ services:
     ports:
       - "8182:8182"
     depends_on:
+      discovery-server:
+        condition: service_healthy
       postgres:
         condition: service_healthy
 
@@ -112,14 +117,12 @@ services:
       args:
         MODULE: order-service
     container_name: rota-order
-    environment:
-      <<: *service-env
-      RESTAURANT_SERVICE_URL: http://restaurant-service:8182
-      PAYMENT_SERVICE_URL: http://payment-service:8184
-      DELIVERY_SERVICE_URL: http://delivery-service:8185
+    environment: *service-env
     ports:
       - "8183:8183"
     depends_on:
+      discovery-server:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
@@ -136,6 +139,8 @@ services:
     ports:
       - "8184:8184"
     depends_on:
+      discovery-server:
+        condition: service_healthy
       postgres:
         condition: service_healthy
 
@@ -146,12 +151,12 @@ services:
       args:
         MODULE: delivery-service
     container_name: rota-delivery
-    environment:
-      <<: *service-env
-      ORDER_SERVICE_URL: http://order-service:8183
+    environment: *service-env
     ports:
       - "8185:8185"
     depends_on:
+      discovery-server:
+        condition: service_healthy
       postgres:
         condition: service_healthy
 

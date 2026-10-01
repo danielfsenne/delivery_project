@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.math.BigDecimal;
 
-@FeignClient(name = "delivery-service", url = "${rota.clients.delivery-url}", configuration = InternalFeignConfig.class)
+@FeignClient(name = "delivery-service", configuration = InternalFeignConfig.class)
 public interface DeliveryFeignClient {
 
     @PostMapping("/internal/deliveries")
