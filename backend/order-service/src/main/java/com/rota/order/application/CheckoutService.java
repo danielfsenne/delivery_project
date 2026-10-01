@@ -46,7 +46,7 @@ public class CheckoutService {
     }
 
     @Transactional
-    public OrderResponse checkout(Long customerId, CheckoutRequest request) {
+    public OrderResponse checkout(Long customerId, String customerEmail, CheckoutRequest request) {
         Cart cart = cartService.get(customerId);
         if (cart.isEmpty()) {
             throw new BusinessException("O carrinho está vazio");
@@ -78,6 +78,7 @@ public class CheckoutService {
 
         Order.Builder builder = Order.builder()
                 .customer(customerId)
+                .customerEmail(customerEmail)
                 .restaurant(quote.restaurantId(), quote.restaurantName(), quote.ownerId())
                 .paymentMethod(request.paymentMethod())
                 .deliveryAddress(request.deliveryAddress().toAddress())

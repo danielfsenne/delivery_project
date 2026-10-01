@@ -14,6 +14,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import org.springframework.data.domain.AbstractAggregateRoot;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -23,7 +24,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "orders")
-public class Order {
+public class Order extends AbstractAggregateRoot<Order> {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,6 +32,9 @@ public class Order {
 
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
+
+    @Column(name = "customer_email")
+    private String customerEmail;
 
     @Column(name = "restaurant_id", nullable = false)
     private Long restaurantId;
@@ -100,6 +104,7 @@ public class Order {
 
     private Order(Builder b) {
         this.customerId = b.customerId;
+        this.customerEmail = b.customerEmail;
         this.restaurantId = b.restaurantId;
         this.restaurantName = b.restaurantName;
         this.restaurantOwnerId = b.restaurantOwnerId;
@@ -124,6 +129,7 @@ public class Order {
         this.total = money(subtotal.add(deliveryFee).subtract(discount).max(BigDecimal.ZERO));
         this.status = OrderStatus.CREATED;
         history.add(new OrderHistory(this, null, OrderStatus.CREATED, customerId, null, b.now));
+        registerEvent(new OrderStatusChangedEvent(this, null, OrderStatus.CREATED, null, b.now));
     }
 
     public static Builder builder() {
@@ -139,8 +145,10 @@ public class Order {
             throw new ConflictException("Transição inválida: %s -> %s".formatted(status, target));
         }
         history.add(new OrderHistory(this, status, target, actorId, reason, now));
+        OrderStatus previous = status;
         this.status = target;
         this.updatedAt = now;
+        registerEvent(new OrderStatusChangedEvent(this, previous, target, reason, now));
     }
 
     public void assignDriver(Long driverId) {
@@ -169,6 +177,10 @@ public class Order {
 
     public Long getCustomerId() {
         return customerId;
+    }
+
+    public String getCustomerEmail() {
+        return customerEmail;
     }
 
     public Long getRestaurantId() {
@@ -253,6 +265,7 @@ public class Order {
 
     public static final class Builder {
         private Long customerId;
+        private String customerEmail;
         private Long restaurantId;
         private String restaurantName;
         private Long restaurantOwnerId;
@@ -268,6 +281,11 @@ public class Order {
 
         public Builder customer(Long customerId) {
             this.customerId = customerId;
+            return this;
+        }
+
+        public Builder customerEmail(String customerEmail) {
+            this.customerEmail = customerEmail;
             return this;
         }
 

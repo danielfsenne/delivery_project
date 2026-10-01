@@ -77,7 +77,7 @@ class CheckoutServiceTest {
         givenCart(BigDecimal.ZERO);
         givenQuote(true, BigDecimal.ZERO);
 
-        OrderResponse order = service.checkout(CUSTOMER, request);
+        OrderResponse order = service.checkout(CUSTOMER, "cliente@rota.dev", request);
 
         assertThat(order.status()).isEqualTo(OrderStatus.PAYMENT_PENDING);
         assertThat(order.subtotal()).isEqualByComparingTo("75.80");
@@ -98,7 +98,7 @@ class CheckoutServiceTest {
         givenQuote(true, BigDecimal.ZERO);
         when(coupons.redeem("SAVE10", new BigDecimal("75.80"), 10L)).thenReturn(new BigDecimal("7.58"));
 
-        OrderResponse order = service.checkout(CUSTOMER, request);
+        OrderResponse order = service.checkout(CUSTOMER, "cliente@rota.dev", request);
 
         assertThat(order.couponCode()).isEqualTo("SAVE10");
         assertThat(order.discount()).isEqualByComparingTo("7.58");
@@ -111,7 +111,7 @@ class CheckoutServiceTest {
         givenQuote(true, BigDecimal.ZERO);
         when(coupons.redeem(any(), any(), any())).thenThrow(new BusinessException("Cupom VENCIDO expirou"));
 
-        assertThatThrownBy(() -> service.checkout(CUSTOMER, request)).hasMessageContaining("expirou");
+        assertThatThrownBy(() -> service.checkout(CUSTOMER, "cliente@rota.dev", request)).hasMessageContaining("expirou");
         verify(orders, never()).saveAndFlush(any(Order.class));
         verify(carts, never()).deleteByUserId(any());
     }
@@ -120,7 +120,7 @@ class CheckoutServiceTest {
     void shouldRejectEmptyCart() {
         when(carts.findByUserId(CUSTOMER)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.checkout(CUSTOMER, request))
+        assertThatThrownBy(() -> service.checkout(CUSTOMER, "cliente@rota.dev", request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("vazio");
     }
@@ -130,7 +130,7 @@ class CheckoutServiceTest {
         givenCart(BigDecimal.ZERO);
         givenQuote(false, BigDecimal.ZERO);
 
-        assertThatThrownBy(() -> service.checkout(CUSTOMER, request))
+        assertThatThrownBy(() -> service.checkout(CUSTOMER, "cliente@rota.dev", request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("fechado");
         verify(orders, never()).saveAndFlush(any(Order.class));
@@ -142,7 +142,7 @@ class CheckoutServiceTest {
         givenCart(new BigDecimal("100.00"));
         givenQuote(true, new BigDecimal("100.00"));
 
-        assertThatThrownBy(() -> service.checkout(CUSTOMER, request))
+        assertThatThrownBy(() -> service.checkout(CUSTOMER, "cliente@rota.dev", request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Pedido mínimo");
     }

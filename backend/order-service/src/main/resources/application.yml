@@ -21,6 +21,21 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    username: ${RABBITMQ_USER:rota}
+    password: ${RABBITMQ_PASSWORD:rota}
+    # Confirmação do broker a cada envio: o outbox só marca como publicado o que chegou.
+    publisher-confirm-type: correlated
+    listener:
+      simple:
+        # Falhou em todas as tentativas: a mensagem vai para a DLQ em vez de voltar à fila.
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 4
+          initial-interval: 500ms
+          multiplier: 2
   web:
     locale: pt_BR
     locale-resolver: fixed
@@ -34,6 +49,9 @@ spring:
 
 rota:
   timezone: America/Sao_Paulo
+  messaging:
+    outbox:
+      enabled: true
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-please-32-bytes-min}
   cart:

@@ -53,7 +53,7 @@ public class OrderController {
     @PreAuthorize("hasRole('CUSTOMER')")
     public OrderResponse checkout(@AuthenticationPrincipal AuthenticatedUser user,
                                   @Valid @RequestBody CheckoutRequest request) {
-        OrderResponse created = checkoutService.checkout(user.id(), request);
+        OrderResponse created = checkoutService.checkout(user.id(), user.email(), request);
         return paymentOrchestrator.tryPayAfterCheckout(user, created);
     }
 
