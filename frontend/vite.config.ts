@@ -3,6 +3,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'node:url'
 
+const gateway = process.env.VITE_GATEWAY_URL ?? 'http://localhost:8080'
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -10,9 +12,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // Tudo passa pelo API Gateway, que roteia para os serviços.
+    // Tudo passa pelo API Gateway, que roteia para os serviços (inclusive o WebSocket).
     proxy: {
-      '/api': { target: process.env.VITE_GATEWAY_URL ?? 'http://localhost:8080' },
+      '/api': { target: gateway },
+      '/ws': { target: gateway, ws: true },
     },
   },
   test: {

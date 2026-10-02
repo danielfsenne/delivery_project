@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { api } from '@/core/api/client'
 import type { Address, Order, OrderSummary, Page, PaymentMethod, Review, Tracking } from '@/core/api/types'
+import { usePollingInterval } from '@/core/realtime/status'
 import { cartKey } from '@/features/cart/api'
 
 export interface CheckoutInput {
@@ -29,14 +30,15 @@ export function useMyOrders() {
   })
 }
 
-/** Atualiza a cada 10s enquanto o pedido está em andamento (WebSocket chega na Fase 3). */
+/** Pedido em andamento: mudanças chegam pelo WebSocket; o polling é reserva até a conclusão. */
 export function useOrder(id: number) {
+  const interval = usePollingInterval(10_000)
   return useQuery({
     queryKey: ['order', id],
     queryFn: async () => (await api.get<Order>(`/orders/${id}`)).data,
     refetchInterval: (query) => {
       const status = query.state.data?.status
-      return status === 'DELIVERED' || status === 'CANCELLED' ? false : 10_000
+      return status === 'DELIVERED' || status === 'CANCELLED' ? false : interval
     },
   })
 }
@@ -91,13 +93,14 @@ export function useCreateReview(id: number) {
   })
 }
 
-/** Posição do entregador enquanto o pedido está a caminho. */
+/** Corrida e posição do entregador; a posição chega ao vivo pelo WebSocket. */
 export function useTracking(orderId: number, enabled: boolean) {
+  const refetchInterval = usePollingInterval(5_000)
   return useQuery({
     queryKey: ['tracking', orderId],
     enabled,
     retry: false,
-    refetchInterval: 5_000,
+    refetchInterval,
     queryFn: async () => (await api.get<Tracking>(`/deliveries/order/${orderId}`)).data,
   })
 }

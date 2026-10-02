@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/core/api/client'
 import type { Order, OrderStatus, Page, RestaurantDetail, RestaurantStats, RestaurantSummary } from '@/core/api/types'
+import { usePollingInterval } from '@/core/realtime/status'
 
 /** Status que aparecem no quadro de pedidos do restaurante. */
 export const boardStatuses: OrderStatus[] = [
@@ -19,20 +20,22 @@ export function useMyRestaurants() {
 }
 
 export function useRestaurantStats(restaurantId: number | undefined) {
+  const refetchInterval = usePollingInterval(15_000)
   return useQuery({
     queryKey: ['partner', restaurantId, 'stats'],
     enabled: !!restaurantId,
-    refetchInterval: 15_000,
+    refetchInterval,
     queryFn: async () => (await api.get<RestaurantStats>(`/orders/restaurant/${restaurantId}/stats`)).data,
   })
 }
 
-/** Pedidos em andamento, atualizados a cada 10s (WebSocket chega na Fase 3). */
+/** Pedidos em andamento. Mudanças chegam pelo WebSocket; o polling é reserva. */
 export function useRestaurantOrders(restaurantId: number | undefined) {
+  const refetchInterval = usePollingInterval(10_000)
   return useQuery({
     queryKey: ['partner', restaurantId, 'orders'],
     enabled: !!restaurantId,
-    refetchInterval: 10_000,
+    refetchInterval,
     queryFn: async () => {
       const params = new URLSearchParams()
       boardStatuses.forEach((s) => params.append('status', s))

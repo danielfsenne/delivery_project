@@ -25,6 +25,27 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+/** Segundos até o token expirar, lidos do próprio JWT (sem validar a assinatura). */
+function secondsUntilExpiry(token: string): number {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload.exp - Date.now() / 1000
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Access token válido para uso fora do axios (ex.: CONNECT do WebSocket),
+ * renovando antes se faltar menos de 30 segundos para expirar.
+ */
+export async function freshAccessToken(): Promise<string | null> {
+  const token = useAuthStore.getState().accessToken
+  if (token && secondsUntilExpiry(token) > 30) return token
+  refreshing ??= refreshAccessToken().finally(() => (refreshing = null))
+  return refreshing
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {

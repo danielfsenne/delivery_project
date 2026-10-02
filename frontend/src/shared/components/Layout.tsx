@@ -4,6 +4,7 @@ import { Bike, LogOut, Receipt, ShoppingBag, Store, User } from 'lucide-react'
 import { useAuthStore } from '@/core/auth/auth-store'
 import { useCart } from '@/features/cart/api'
 import { logout as logoutRequest } from '@/features/auth/api'
+import { Toaster } from './Toaster'
 
 export function Layout() {
   const user = useAuthStore((s) => s.user)
@@ -75,6 +76,7 @@ export function Layout() {
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
         <Outlet />
       </main>
+      <Toaster />
     </div>
   )
 }

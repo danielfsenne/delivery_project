@@ -1,22 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/core/api/client'
 import type { Coordinates, Delivery, DeliveryHistory, DriverProfile, DriverStatus } from '@/core/api/types'
+import { usePollingInterval } from '@/core/realtime/status'
 
 const meKey = ['driver', 'me'] as const
 
 export function useDriverMe() {
+  const refetchInterval = usePollingInterval(10_000)
   return useQuery({
     queryKey: meKey,
-    refetchInterval: 10_000,
+    refetchInterval,
     queryFn: async () => (await api.get<DriverProfile>('/deliveries/driver/me')).data,
   })
 }
 
 export function useAvailableDeliveries(enabled: boolean) {
+  const refetchInterval = usePollingInterval(8_000)
   return useQuery({
     queryKey: ['driver', 'available'],
     enabled,
-    refetchInterval: 8_000,
+    refetchInterval,
     queryFn: async () => (await api.get<Delivery[]>('/deliveries/available')).data,
   })
 }
