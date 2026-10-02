@@ -1,8 +1,12 @@
+import { lazy, Suspense } from 'react'
 import { Bike, MapPin } from 'lucide-react'
 import type { Coordinates, DeliveryStatus } from '@/core/api/types'
 import { useTracking } from './api'
 import { formatTime } from '@/shared/lib/format'
 import { Card } from '@/shared/components/ui'
+
+// Leaflet só é baixado quando há uma entrega para mostrar.
+const TrackingMap = lazy(() => import('./TrackingMap'))
 
 const deliveryLabel: Record<DeliveryStatus, string> = {
   WAITING_DRIVER: 'Procurando um entregador próximo...',
@@ -20,8 +24,8 @@ function distanceKm(a: Coordinates, b: Coordinates): number {
 }
 
 /**
- * Acompanhamento da entrega, atualizado a cada 5 segundos.
- * O mapa em tempo real chega na Fase 3, com WebSocket.
+ * Acompanhamento da entrega. A posição do entregador chega pelo WebSocket e o mapa
+ * se move sozinho; sem conexão, o polling de reserva mantém os dados.
  */
 export function TrackingCard({ orderId }: { orderId: number }) {
   const { data: tracking } = useTracking(orderId, true)
@@ -46,6 +50,13 @@ export function TrackingCard({ orderId }: { orderId: number }) {
           )}
         </div>
       </div>
+      {tracking.status !== 'DELIVERED' && (
+        <div className="mt-4">
+          <Suspense fallback={<div className="h-64 animate-pulse rounded-lg bg-gray-100" />}>
+            <TrackingMap tracking={tracking} />
+          </Suspense>
+        </div>
+      )}
     </Card>
   )
 }
