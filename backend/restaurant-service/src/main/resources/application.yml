@@ -21,6 +21,18 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    username: ${RABBITMQ_USER:rota}
+    password: ${RABBITMQ_PASSWORD:rota}
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 4
+          initial-interval: 500ms
+          multiplier: 2
   web:
     locale: pt_BR
     locale-resolver: fixed
