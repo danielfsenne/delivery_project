@@ -16,11 +16,9 @@ public class RestaurantCatalogAdapter implements RestaurantCatalog {
     static final String RESILIENCE_NAME = "restaurant";
 
     private final RestaurantFeignClient client;
-    private final RestaurantInternalFeignClient internalClient;
 
-    public RestaurantCatalogAdapter(RestaurantFeignClient client, RestaurantInternalFeignClient internalClient) {
+    public RestaurantCatalogAdapter(RestaurantFeignClient client) {
         this.client = client;
-        this.internalClient = internalClient;
     }
 
     /**
@@ -36,11 +34,6 @@ public class RestaurantCatalogAdapter implements RestaurantCatalog {
         } catch (FeignException e) {
             throw new ServiceUnavailableException("Catálogo de restaurantes indisponível. Tente novamente.", e);
         }
-    }
-
-    @Override
-    public void addRating(Long restaurantId, int score) {
-        internalClient.addRating(restaurantId, new RestaurantInternalFeignClient.RatingBody(score));
     }
 
     @SuppressWarnings("unused")

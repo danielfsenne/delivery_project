@@ -13,9 +13,6 @@ public interface RestaurantCatalog {
 
     Quote quote(Long restaurantId, List<QuoteLine> lines);
 
-    /** Registra a nota de uma avaliação na média do restaurante. */
-    void addRating(Long restaurantId, int score);
-
     record QuoteLine(Long productId, int quantity, List<Long> optionIds) {
     }
 
