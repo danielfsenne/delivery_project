@@ -1,10 +1,12 @@
 package com.rota.common.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rota.common.events.IntegrationEvent;
 import com.rota.common.events.RotaEvents;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.DefaultJackson2JavaTypeMapper;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -32,9 +34,18 @@ public class RabbitMessagingAutoConfiguration {
         return new DirectExchange(RotaEvents.DEAD_LETTER_EXCHANGE, true, false);
     }
 
+    /**
+     * Listeners com parâmetro tipado usam o tipo do método. Listeners que recebem vários eventos
+     * na mesma fila ({@code @RabbitHandler}) usam o header {@code __TypeId__}, aceito apenas
+     * para classes do pacote de eventos.
+     */
     @Bean
     @ConditionalOnMissingBean(MessageConverter.class)
     MessageConverter jsonMessageConverter(ObjectMapper objectMapper) {
-        return new Jackson2JsonMessageConverter(objectMapper);
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter(objectMapper);
+        DefaultJackson2JavaTypeMapper typeMapper = new DefaultJackson2JavaTypeMapper();
+        typeMapper.setTrustedPackages(IntegrationEvent.class.getPackageName());
+        converter.setJavaTypeMapper(typeMapper);
+        return converter;
     }
 }

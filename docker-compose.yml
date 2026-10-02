@@ -184,5 +184,33 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  notification-service:
+    <<: *java-service
+    build:
+      context: ./backend
+      args:
+        MODULE: notification-service
+    container_name: rota-notification
+    environment:
+      <<: *service-env
+      MAIL_HOST: mailpit
+    ports:
+      - "8186:8186"
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # SMTP de desenvolvimento (sucessor do MailHog): captura os e-mails em http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: rota-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
 volumes:
   postgres-data:
