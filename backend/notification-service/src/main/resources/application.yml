@@ -35,6 +35,9 @@ rota:
     secret: ${JWT_SECRET:dev-only-secret-change-me-please-32-bytes-min}
   mail:
     from: Rota <pedidos@rota.dev>
+  websocket:
+    # Origens aceitas no handshake (o front em desenvolvimento roda em localhost:5173).
+    allowed-origins: ${WS_ALLOWED_ORIGINS:http://localhost:*}
 
 management:
   endpoints:

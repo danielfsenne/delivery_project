@@ -65,6 +65,11 @@ spring:
                 - Path=/api/deliveries/**
               filters:
                 - StripPrefix=1
+            # WebSocket (STOMP) das notificações em tempo real; o token vai no frame CONNECT.
+            - id: realtime
+              uri: lb:ws://notification-service
+              predicates:
+                - Path=/ws,/ws/**
           globalcors:
             cors-configurations:
               '[/**]':
