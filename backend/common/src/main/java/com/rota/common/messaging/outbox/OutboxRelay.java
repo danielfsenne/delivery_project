@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
  *       sai de novo. Os consumidores são idempotentes por {@code eventId}.</li>
  *   <li><b>Ordem:</b> ao primeiro erro o lote para; o ciclo seguinte recomeça do mesmo evento.</li>
  *   <li><b>Várias instâncias:</b> {@code FOR UPDATE SKIP LOCKED} impede que duas publiquem o mesmo lote.</li>
+ *   <li><b>Trace:</b> o envio continua o trace da requisição que gravou o evento ({@link OutboxTracing}).</li>
  * </ul>
  */
 public class OutboxRelay {
@@ -36,7 +37,7 @@ public class OutboxRelay {
     private static final Logger log = LoggerFactory.getLogger(OutboxRelay.class);
 
     private static final String SELECT_PENDING = """
-            SELECT id, event_id, routing_key, event_type, payload
+            SELECT id, event_id, routing_key, event_type, payload, trace_parent
               FROM outbox_events
              WHERE published_at IS NULL
              ORDER BY id
@@ -51,7 +52,7 @@ public class OutboxRelay {
 
     private static final RowMapper<PendingEvent> MAPPER = (rs, i) -> new PendingEvent(
             rs.getLong("id"), rs.getObject("event_id", UUID.class), rs.getString("routing_key"),
-            rs.getString("event_type"), rs.getString("payload"));
+            rs.getString("event_type"), rs.getString("payload"), rs.getString("trace_parent"));
 
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
@@ -59,15 +60,22 @@ public class OutboxRelay {
     private final int batchSize;
     private final Duration confirmTimeout;
     private final int retentionDays;
+    private final OutboxTracing tracing;
 
     public OutboxRelay(JdbcTemplate jdbc, TransactionTemplate transaction, RabbitTemplate rabbit,
                        OutboxProperties properties) {
+        this(jdbc, transaction, rabbit, properties, OutboxTracing.NOOP);
+    }
+
+    public OutboxRelay(JdbcTemplate jdbc, TransactionTemplate transaction, RabbitTemplate rabbit,
+                       OutboxProperties properties, OutboxTracing tracing) {
         this.jdbc = jdbc;
         this.transaction = transaction;
         this.rabbit = rabbit;
         this.batchSize = properties.batchSize();
         this.confirmTimeout = properties.confirmTimeout();
         this.retentionDays = properties.retentionDays();
+        this.tracing = tracing;
         if (!rabbit.getConnectionFactory().isPublisherConfirms()) {
             throw new IllegalStateException(
                     "O outbox exige spring.rabbitmq.publisher-confirm-type=correlated para confirmar cada envio");
@@ -95,7 +103,7 @@ public class OutboxRelay {
         int sent = 0;
         for (PendingEvent event : pending) {
             try {
-                send(event);
+                tracing.inTrace(event.traceParent(), "outbox " + event.routingKey(), () -> send(event));
             } catch (Exception e) {
                 jdbc.update(MARK_FAILED, truncate(e.getMessage()), event.id());
                 log.warn("Outbox: falha ao publicar {} ({}); nova tentativa no próximo ciclo: {}",
@@ -133,6 +141,7 @@ public class OutboxRelay {
         return message.length() <= 500 ? message : message.substring(0, 500);
     }
 
-    record PendingEvent(long id, UUID eventId, String routingKey, String eventType, String payload) {
+    record PendingEvent(long id, UUID eventId, String routingKey, String eventType, String payload,
+                        String traceParent) {
     }
 }

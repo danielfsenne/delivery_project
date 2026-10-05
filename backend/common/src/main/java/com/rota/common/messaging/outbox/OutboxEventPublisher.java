@@ -17,16 +17,22 @@ import java.sql.Timestamp;
 public class OutboxEventPublisher implements EventPublisher {
 
     private static final String INSERT = """
-            INSERT INTO outbox_events (event_id, routing_key, event_type, payload, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO outbox_events (event_id, routing_key, event_type, payload, created_at, trace_parent)
+            VALUES (?, ?, ?, ?, ?, ?)
             """;
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
+    private final OutboxTracing tracing;
 
     public OutboxEventPublisher(JdbcTemplate jdbc, ObjectMapper objectMapper) {
+        this(jdbc, objectMapper, OutboxTracing.NOOP);
+    }
+
+    public OutboxEventPublisher(JdbcTemplate jdbc, ObjectMapper objectMapper, OutboxTracing tracing) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
+        this.tracing = tracing;
     }
 
     @Override
@@ -35,7 +41,7 @@ public class OutboxEventPublisher implements EventPublisher {
             throw new IllegalStateException("Eventos devem ser publicados dentro da transação da mudança");
         }
         jdbc.update(INSERT, event.eventId(), routingKey, event.getClass().getName(), toJson(event),
-                Timestamp.from(event.occurredAt()));
+                Timestamp.from(event.occurredAt()), tracing.currentTraceParent());
     }
 
     private String toJson(IntegrationEvent event) {

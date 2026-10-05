@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -49,6 +50,6 @@ class OutboxEventPublisherTest {
 
         verify(jdbc).update(anyString(), eq(event.eventId()), eq("review.created"),
                 eq(ReviewCreated.class.getName()), contains("\"foodRating\":5"),
-                eq(Timestamp.from(event.occurredAt())));
+                eq(Timestamp.from(event.occurredAt())), isNull());
     }
 }

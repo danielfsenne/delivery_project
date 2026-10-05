@@ -39,9 +39,9 @@ class OutboxRelayTest {
     private final OutboxProperties properties = new OutboxProperties(true, 10, Duration.ofSeconds(1), 3);
 
     private final PendingEvent first = new PendingEvent(1, UUID.randomUUID(), "order.status-changed",
-            "com.rota.common.events.OrderStatusChanged", "{\"orderId\":1}");
+            "com.rota.common.events.OrderStatusChanged", "{\"orderId\":1}", null);
     private final PendingEvent second = new PendingEvent(2, UUID.randomUUID(), "order.status-changed",
-            "com.rota.common.events.OrderStatusChanged", "{\"orderId\":2}");
+            "com.rota.common.events.OrderStatusChanged", "{\"orderId\":2}", null);
 
     private OutboxRelay relay;
 

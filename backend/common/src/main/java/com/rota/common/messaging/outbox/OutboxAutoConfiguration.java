@@ -3,6 +3,9 @@ package com.rota.common.messaging.outbox;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rota.common.messaging.EventPublisher;
 import com.rota.common.messaging.ProcessedEvents;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
@@ -40,14 +43,22 @@ public class OutboxAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        EventPublisher outboxEventPublisher(JdbcTemplate jdbc, ObjectMapper objectMapper) {
-            return new OutboxEventPublisher(jdbc, objectMapper);
+        OutboxTracing outboxTracing(ObjectProvider<Tracer> tracer, ObjectProvider<Propagator> propagator) {
+            Tracer t = tracer.getIfAvailable();
+            Propagator p = propagator.getIfAvailable();
+            return t != null && p != null ? new OutboxTracing(t, p) : OutboxTracing.NOOP;
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        EventPublisher outboxEventPublisher(JdbcTemplate jdbc, ObjectMapper objectMapper, OutboxTracing tracing) {
+            return new OutboxEventPublisher(jdbc, objectMapper, tracing);
         }
 
         @Bean
         OutboxRelay outboxRelay(JdbcTemplate jdbc, TransactionTemplate transaction, RabbitTemplate rabbit,
-                                OutboxProperties properties) {
-            return new OutboxRelay(jdbc, transaction, rabbit, properties);
+                                OutboxProperties properties, OutboxTracing tracing) {
+            return new OutboxRelay(jdbc, transaction, rabbit, properties, tracing);
         }
     }
 }
