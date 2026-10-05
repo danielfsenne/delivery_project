@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: api-gateway
+  # Leva o contexto do trace entre as threads do Reactor (logs com traceId e spans encadeados).
+  reactor:
+    context-propagation: auto
   data:
     redis:
       host: ${REDIS_HOST:localhost}
