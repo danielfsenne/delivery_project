@@ -24,7 +24,7 @@ public class SecurityConfig {
                 .requestMatchers("/cart", "/cart/**").hasRole("CUSTOMER")
                 .requestMatchers("/orders/restaurant/**").hasAnyRole("RESTAURANT", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/orders/reviews").permitAll()
-                .requestMatchers("/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                 .permitAll()
                 .anyRequest().authenticated());
         return http.build();

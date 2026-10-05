@@ -21,7 +21,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/restaurants/mine", "/restaurants/mine/**").hasAnyRole("RESTAURANT", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/restaurants", "/restaurants/*").permitAll()
-                .requestMatchers("/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                 .permitAll()
                 .anyRequest().authenticated());
         return http.build();

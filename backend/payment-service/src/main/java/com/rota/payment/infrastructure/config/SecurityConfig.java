@@ -19,7 +19,7 @@ public class SecurityConfig {
         http.with(StatelessSecurity.jwt(jwtService), c -> {});
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/internal/**").hasRole("SERVICE")
-                .requestMatchers("/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                 .permitAll()
                 .anyRequest().authenticated());
         return http.build();
