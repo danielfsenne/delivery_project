@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # Os serviços são descobertos pelo Eureka: novas instâncias (docker compose up --scale)
+  # entram na coleta sozinhas, sem lista fixa de endereços.
+  - job_name: rota-services
+    metrics_path: /actuator/prometheus
+    eureka_sd_configs:
+      - server: http://discovery-server:8761/eureka
+        refresh_interval: 15s
+    relabel_configs:
+      - source_labels: [__meta_eureka_app_name]
+        target_label: service
+        action: lowercase
+
+  # O Eureka não se registra nele mesmo.
+  - job_name: discovery-server
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["discovery-server:8761"]
+        labels:
+          service: discovery-server

@@ -6,6 +6,13 @@ x-java-service: &java-service
   mem_limit: 448m
   restart: unless-stopped
 
+# Healthcheck dos serviços Java; cada um define só o comando com a própria porta.
+x-healthcheck: &healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 40s
+
 x-service-env: &service-env
   DB_HOST: postgres
   DB_USER: ${POSTGRES_USER:-rota}
@@ -14,6 +21,7 @@ x-service-env: &service-env
   RABBITMQ_HOST: rabbitmq
   JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-please-32-bytes-min}
   EUREKA_URL: http://discovery-server:8761/eureka
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
   JAVA_OPTS: -XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k
 
 services:
@@ -85,9 +93,15 @@ services:
       args:
         MODULE: api-gateway
     container_name: rota-gateway
-    environment: *service-env
+    environment:
+      <<: *service-env
+      # Front em desenvolvimento (Vite) e o container do front (nginx).
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:4173
     ports:
       - "8080:8080"
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -104,6 +118,9 @@ services:
     environment: *service-env
     ports:
       - "8181:8181"
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8181/actuator/health | grep -q UP"]
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -120,6 +137,9 @@ services:
     environment: *service-env
     ports:
       - "8182:8182"
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8182/actuator/health | grep -q UP"]
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -140,6 +160,9 @@ services:
     environment: *service-env
     ports:
       - "8183:8183"
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8183/actuator/health | grep -q UP"]
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -160,6 +183,9 @@ services:
     environment: *service-env
     ports:
       - "8184:8184"
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8184/actuator/health | grep -q UP"]
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -176,6 +202,9 @@ services:
     environment: *service-env
     ports:
       - "8185:8185"
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8185/actuator/health | grep -q UP"]
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -196,6 +225,9 @@ services:
       MAIL_HOST: mailpit
     ports:
       - "8186:8186"
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8186/actuator/health | grep -q UP"]
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -212,5 +244,56 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  # Observabilidade: métricas (Prometheus), painéis (Grafana) e traces (Jaeger).
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: rota-prometheus
+    mem_limit: 256m
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=3d
+      # Guarda o trace_id junto dos pontos de latência para o Grafana linkar com o Jaeger.
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: rota-grafana
+    mem_limit: 256m
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-rota}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-rota}
+      # Painéis abertos para leitura sem login; editar exige o admin.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/rota-overview.json
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - jaeger
+
+  # Recebe os spans por OTLP (HTTP 4318) e mostra os traces em http://localhost:16686
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: rota-jaeger
+    mem_limit: 256m
+    command: ["--memory.max-traces=20000"]
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+
 volumes:
   postgres-data:
+  prometheus-data:

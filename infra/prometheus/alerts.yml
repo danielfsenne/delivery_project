@@ -1,0 +1,57 @@
+groups:
+  - name: rota
+    rules:
+      - alert: ServicoFora
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.service }} não responde há mais de 1 minuto"
+
+      # Um serviço que para sai do Eureka e, com ele, da lista de alvos; up == 0 não pega esse caso.
+      # Aqui: serviços coletados há 10 minutos que não aparecem mais.
+      - alert: ServicoSumiu
+        expr: group by (service) (up offset 10m) unless group by (service) (up)
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.service }} saiu do Eureka e não está mais sendo coletado"
+
+      - alert: TaxaDeErrosAlta
+        expr: |
+          sum by (application) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            / sum by (application) (rate(http_server_requests_seconds_count[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.application }} com mais de 5% de respostas 5xx"
+
+      - alert: CircuitoAberto
+        expr: resilience4j_circuitbreaker_state{state="open"} == 1
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Circuito {{ $labels.name }} aberto no {{ $labels.application }}"
+          description: Chamadas ao serviço de destino estão sendo recusadas na hora até ele voltar.
+
+      # Eventos parados no outbox: RabbitMQ fora ou relay travado. Nada se perde, mas
+      # e-mails, tempo real e abertura de corridas ficam atrasados.
+      - alert: OutboxAcumulando
+        expr: rota_outbox_oldest_age_seconds > 60
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.application }} com eventos esperando há mais de 1 minuto no outbox"
+
+      - alert: FalhasAoConsumirEventos
+        expr: sum by (application) (increase(spring_rabbit_listener_seconds_count{error!="none"}[5m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.application }} teve falhas ao processar mensagens nos últimos 5 minutos"
+          description: Após 4 tentativas a mensagem vai para a DLQ da fila (<fila>.dlq).
