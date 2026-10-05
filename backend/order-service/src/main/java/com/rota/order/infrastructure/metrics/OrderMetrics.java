@@ -21,8 +21,7 @@ public class OrderMetrics {
     public OrderMetrics(MeterRegistry registry) {
         this.registry = registry;
         this.paidAmount = DistributionSummary.builder("rota.orders.paid.amount")
-                .description("Valor dos pedidos pagos")
-                .baseUnit("BRL")
+                .description("Valor dos pedidos pagos, em reais")
                 .register(registry);
     }
 
