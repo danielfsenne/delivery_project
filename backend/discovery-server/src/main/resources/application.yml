@@ -19,6 +19,9 @@ eureka:
     eviction-interval-timer-in-ms: 10000
 
 management:
+  metrics:
+    tags:
+      application: discovery-server
   endpoints:
     web:
       exposure:
