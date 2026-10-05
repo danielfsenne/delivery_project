@@ -2,6 +2,7 @@ package com.rota.common.observability;
 
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationPredicate;
+import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
@@ -31,6 +32,7 @@ class ObservabilityAutoConfigurationTest {
             assertThat(allow(predicates, "http.client.requests",
                     client("http://10.0.0.2:8761/eureka/apps/delta"))).isFalse();
             assertThat(allow(predicates, "tasks.scheduled.execution", new Observation.Context())).isFalse();
+            assertThat(allow(predicates, "spring.security.filterchains", new Observation.Context())).isFalse();
         });
     }
 
@@ -42,6 +44,10 @@ class ObservabilityAutoConfigurationTest {
             assertThat(allow(predicates, "http.server.requests", server("/orders/42"))).isTrue();
             assertThat(allow(predicates, "http.client.requests",
                     client("http://10.0.0.3:8184/payments"))).isTrue();
+
+            Observation.Context security = new Observation.Context();
+            security.setParentObservation(Observation.start("http.server.requests", ObservationRegistry.create()));
+            assertThat(allow(predicates, "spring.security.filterchains", security)).isTrue();
         });
     }
 

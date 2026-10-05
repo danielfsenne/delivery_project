@@ -25,6 +25,15 @@ public class ObservabilityAutoConfiguration {
         return (name, context) -> !"tasks.scheduled.execution".equals(name);
     }
 
+    /**
+     * O Spring Security observa a própria cadeia de filtros. Numa requisição ignorada acima
+     * (como /actuator), essas observações ficariam sem pai e virariam traces soltos.
+     */
+    @Bean
+    ObservationPredicate ignoreOrphanSecurityObservations() {
+        return (name, context) -> !(name.startsWith("spring.security.") && context.getParentObservation() == null);
+    }
+
     @Bean
     @ConditionalOnClass(ClientRequestObservationContext.class)
     ObservationPredicate ignoreEurekaCalls() {
