@@ -60,5 +60,10 @@ public class OutboxAutoConfiguration {
                                 OutboxProperties properties, OutboxTracing tracing) {
             return new OutboxRelay(jdbc, transaction, rabbit, properties, tracing);
         }
+
+        @Bean
+        OutboxMetrics outboxMetrics(JdbcTemplate jdbc) {
+            return new OutboxMetrics(jdbc);
+        }
     }
 }
