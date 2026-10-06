@@ -236,6 +236,17 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  # Build do React servido pelo nginx, que repassa /api e /ws para o gateway.
+  frontend:
+    build: ./frontend
+    container_name: rota-frontend
+    mem_limit: 64m
+    restart: unless-stopped
+    ports:
+      - "4173:80"
+    depends_on:
+      - api-gateway
+
   # SMTP de desenvolvimento (sucessor do MailHog): captura os e-mails em http://localhost:8025
   mailpit:
     image: axllent/mailpit:v1.21
