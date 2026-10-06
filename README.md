@@ -36,8 +36,9 @@ backend/
   payment-service/      pagamentos (Strategy: fake e dinheiro)         :8184  payment_db
   delivery-service/     entregadores e corridas                        :8185  delivery_db
   notification-service/ e-mails e WebSocket (STOMP)                    :8186
-frontend/               aplicação React                                :5173
-infra/                  scripts de infraestrutura
+frontend/               aplicação React (nginx no compose)             :5173 dev / :4173
+infra/                  init dos bancos, Prometheus (scrape e alertas), Grafana (painéis)
+.github/workflows/      CI: testes, build do front e das imagens
 ```
 
 Cada serviço segue a mesma organização em camadas:
@@ -51,11 +52,15 @@ infrastructure      configuração, clientes HTTP, persistência externa
 
 ## Executando
 
-Pré-requisitos: Docker e Node 18+. O backend compila dentro do Docker, então o JDK local é opcional.
+Pré-requisito: Docker. Tudo compila dentro dos containers, então JDK e Node locais são opcionais.
 
 ```bash
-docker compose up -d --build     # infraestrutura, Eureka, gateway e os serviços
+docker compose up -d --build     # infraestrutura, serviços, front e observabilidade
+```
 
+Para desenvolver o front com hot reload (Node 18+):
+
+```bash
 cd frontend
 npm install
 npm run dev                      # http://localhost:5173 (chama o gateway em :8080)
@@ -63,13 +68,17 @@ npm run dev                      # http://localhost:5173 (chama o gateway em :80
 
 | Painel | Endereço |
 |---|---|
-| Aplicação | http://localhost:5173 |
+| Aplicação (build no nginx) | http://localhost:4173 |
+| Aplicação (Vite, dev) | http://localhost:5173 |
 | API Gateway | http://localhost:8080/api/... |
 | Eureka | http://localhost:8761 |
 | RabbitMQ (rota / rota) | http://localhost:15672 |
 | E-mails de teste (Mailpit) | http://localhost:8025 |
+| Grafana (rota / rota) | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
+| Jaeger | http://localhost:16686 |
 
-Os serviços Java têm limite de 448 MB cada no compose; a stack inteira usa cerca de 3 GB.
+Os serviços Java têm limite de 448 MB cada no compose; a stack inteira usa cerca de 3,5 GB.
 
 Contas de demonstração (senha `rota12345`):
 
@@ -159,10 +168,31 @@ Cliente      avalia ----------------------> review.created -------------> restau
 - **WebSocket autenticado**: JWT no frame CONNECT; cada usuário só assina a própria fila, e só entregadores
   assinam o tópico de corridas.
 
+## Produção e observabilidade
+
+- **Imagens**: um Dockerfile multi-stage para todos os serviços Java (`--build-arg MODULE=...`). Ele compila
+  só o módulo pedido, separa o jar nas camadas do Spring Boot e roda numa JRE Alpine com usuário sem
+  privilégios. Uma mudança no código troca só a última camada.
+- **Front**: build do Vite servido pelo nginx, que repassa `/api` e `/ws` para o gateway. Assim o navegador
+  fala com uma origem só, como no dev.
+- **Healthchecks**: cada serviço espera as dependências ficarem saudáveis (`/actuator/health`) antes de subir.
+- **Métricas**: todos os serviços expõem `/actuator/prometheus`. O Prometheus descobre os alvos pelo Eureka,
+  então um serviço novo entra no scrape sem configuração. Além das métricas de HTTP e JVM, há métricas de
+  negócio: pedidos por status, valor pago e eventos pendentes no outbox.
+- **Painel no Grafana** (provisionado, abre na home): serviços no ar, tráfego, latência p95, erros, pedidos,
+  faturamento, ticket médio, filas, circuit breakers e JVM. Os pontos de latência trazem o `trace_id` e
+  levam direto ao trace no Jaeger.
+- **Alertas**: serviço fora ou sumido do Eureka, taxa de erros alta, circuito aberto, outbox acumulando e
+  falhas ao consumir eventos.
+- **Tracing distribuído** com OpenTelemetry: um pedido aparece como um trace só no Jaeger, do gateway aos
+  serviços, passando por Feign, pelo outbox e pelo RabbitMQ até os consumidores.
+- **CI** (GitHub Actions): `mvn verify` no backend e lint, testes e build no front, em paralelo. Depois o
+  build das 9 imagens Docker em matriz, com cache, e a validação do `docker-compose.yml`.
+
 ## Roadmap
 
 - [x] Fase 1 — MVP: Auth, Restaurant, Product, Cart, Order
 - [x] Fase 2 — Negócio: Payment, Coupon, Rating, Delivery
 - [x] Fase 3 — Distribuído: RabbitMQ, Redis, WebSocket, Gateway, Eureka, Resilience4j
-- [ ] Fase 4 — Produção: Docker, CI/CD, Prometheus, Grafana, OpenTelemetry
+- [x] Fase 4 — Produção: Docker, CI/CD, Prometheus, Grafana, OpenTelemetry
 - [ ] Fase 5 — Qualidade: testes unitários e de integração, segurança, documentação
