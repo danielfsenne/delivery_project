@@ -8,6 +8,7 @@ import com.rota.auth.interfaces.rest.dto.RegisterRequest;
 import com.rota.auth.interfaces.rest.dto.UserResponse;
 import com.rota.common.exception.BusinessException;
 import com.rota.common.exception.ConflictException;
+import com.rota.common.exception.ForbiddenException;
 import com.rota.common.exception.NotFoundException;
 import com.rota.common.exception.UnauthorizedException;
 import com.rota.common.security.JwtService;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private static final String INVALID_CREDENTIALS = "E-mail ou senha inválidos";
+    private static final String BLOCKED_ACCOUNT = "Conta bloqueada. Fale com o suporte.";
 
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
@@ -53,12 +55,20 @@ public class AuthService {
         User user = users.findByEmail(User.normalizeEmail(request.email()))
                 .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
                 .orElseThrow(() -> new UnauthorizedException(INVALID_CREDENTIALS));
+        // Só depois da senha certa: quem erra a senha não descobre que a conta está bloqueada.
+        if (!user.isActive()) {
+            throw new ForbiddenException(BLOCKED_ACCOUNT);
+        }
         return issueTokens(user);
     }
 
     @Transactional(noRollbackFor = UnauthorizedException.class)
     public AuthResponse refresh(String refreshToken) {
-        return issueTokens(refreshTokens.consume(refreshToken));
+        User user = refreshTokens.consume(refreshToken);
+        if (!user.isActive()) {
+            throw new UnauthorizedException(BLOCKED_ACCOUNT);
+        }
+        return issueTokens(user);
     }
 
     public void logout(String refreshToken) {
