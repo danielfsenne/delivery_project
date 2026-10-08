@@ -66,6 +66,14 @@ public class OrderService {
                 restaurantId, user.id(), filter, pageable).map(OrderResponse::from);
     }
 
+    /** Todos os pedidos da plataforma (administrador); o acesso é checado no controller. */
+    @Transactional(readOnly = true)
+    public Page<OrderSummaryResponse> listAll(Collection<OrderStatus> statuses, Pageable pageable) {
+        Collection<OrderStatus> filter = statuses == null || statuses.isEmpty()
+                ? EnumSet.allOf(OrderStatus.class)
+                : statuses;
+        return orders.findByStatusInOrderByCreatedAtDesc(filter, pageable).map(OrderSummaryResponse::from);
+    }
     public OrderResponse changeStatus(AuthenticatedUser user, Long orderId, OrderStatus target, String reason) {
         return transition(user, orderId, target, user.id(), reason);
     }

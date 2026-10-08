@@ -171,6 +171,28 @@ class OrderFlowIT extends IntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void adminVeTodosOsPedidosEOsNumerosDoDia() throws Exception {
+        when(payments.charge(any(), any(), any(), any())).thenReturn(new PaymentOutcome(true, null));
+        asCustomer(post("/cart/items"), """
+                {"restaurantId": %d, "productId": 4, "quantity": 1}""".formatted(RESTAURANT_ID));
+        long orderId = body(asCustomer(post("/orders"), checkoutBody())).get("id").asLong();
+        String admin = tokenFor(1, Role.ADMIN);
+
+        JsonNode page = body(mvc.perform(get("/orders/admin").param("status", "PAID").param("size", "100")
+                        .header("Authorization", admin))
+                .andExpect(status().isOk()));
+        assertThat(page.get("content").findValuesAsText("id")).contains(String.valueOf(orderId));
+
+        mvc.perform(get("/orders/admin/stats").header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.topRestaurants[0].restaurantId").value(RESTAURANT_ID));
+        assertThat(body(mvc.perform(get("/orders/admin/stats").header("Authorization", admin)))
+                .get("ordersToday").asLong()).isPositive();
+
+        asCustomer(get("/orders/admin/stats"), null).andExpect(status().isForbidden());
+    }
+
     private ResultActions asCustomer(MockHttpServletRequestBuilder request, String content) throws Exception {
         request.header("Authorization", tokenFor(customerId, Role.CUSTOMER));
         if (content != null) {

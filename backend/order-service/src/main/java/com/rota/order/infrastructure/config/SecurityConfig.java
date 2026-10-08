@@ -23,6 +23,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/cart", "/cart/**").hasRole("CUSTOMER")
                 .requestMatchers("/orders/restaurant/**").hasAnyRole("RESTAURANT", "ADMIN")
+                .requestMatchers("/orders/admin", "/orders/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/orders/reviews").permitAll()
                 .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                 .permitAll()

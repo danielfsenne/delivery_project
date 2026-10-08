@@ -32,10 +32,10 @@ import static com.rota.order.domain.OrderStatus.RESTAURANT_ACCEPTED;
 public class RestaurantStatsService {
 
     /** Pedidos pagos contam como venda; cancelados e aguardando pagamento não. */
-    private static final Set<OrderStatus> SOLD = EnumSet.of(PAID, RESTAURANT_ACCEPTED, PREPARING, READY_FOR_PICKUP,
+    static final Set<OrderStatus> SOLD = EnumSet.of(PAID, RESTAURANT_ACCEPTED, PREPARING, READY_FOR_PICKUP,
             OUT_FOR_DELIVERY, DELIVERED);
 
-    private static final Set<OrderStatus> IN_PROGRESS = EnumSet.of(PAID, RESTAURANT_ACCEPTED, PREPARING,
+    static final Set<OrderStatus> IN_PROGRESS = EnumSet.of(PAID, RESTAURANT_ACCEPTED, PREPARING,
             READY_FOR_PICKUP, OUT_FOR_DELIVERY);
 
     private final OrderRepository orders;
