@@ -98,28 +98,65 @@ Para testar:
 - **Tempo real**: abra o pedido como cliente em uma janela e o painel do restaurante ou do entregador em
   outra (janela anônima). Status, avisos e a posição do entregador no mapa mudam sem recarregar.
 - **E-mails**: pagamento aprovado, saída para entrega, entrega e cancelamento chegam no Mailpit.
+- **Administração**: em `/admin`, os números do dia da plataforma, todos os pedidos, cupons (criar,
+  ativar e desativar) e usuários (buscar e bloquear). Uma conta bloqueada perde a sessão e não entra mais.
 
-Testes do backend (sem JDK local):
+## Documentação da API
+
+Swagger UI único no gateway: http://localhost:8080/swagger-ui.html. Um seletor troca entre os serviços.
+Faça login em `POST /auth/login` (auth-service), clique em **Authorize** e cole o `accessToken`.
+O "Try it out" passa pelo gateway, com as mesmas rotas, filtros e rate limit que o front usa.
+
+## Testes
 
 ```bash
-./backend/mvn-docker.sh verify
+./backend/mvn-docker.sh test      # unitários (rápidos, sem Docker)
+./backend/mvn-docker.sh verify    # unitários + integração com Testcontainers
+cd frontend && npm test           # front (Vitest)
 ```
+
+- **Unitários** (JUnit 5, Mockito, AssertJ): máquina de estados, cupons, carrinho, políticas de acesso,
+  outbox, resiliência do cliente de pagamento e autoconfigurações do `common`.
+- **Integração** (`*IT`, Testcontainers): sobem o serviço inteiro contra **Postgres, Redis e RabbitMQ reais**.
+  Só as chamadas a outros serviços são dublês.
+  - `OrderFlowIT`: carrinho, cupom, checkout, pagamento, avanço pelo restaurante e os eventos que o outbox
+    publica no RabbitMQ, na ordem certa. Também cobre o pagamento fora do ar e pago depois, e a transição
+    inválida respondendo 409.
+  - `CouponUsageIT`: 20 checkouts simultâneos não passam do limite de uso do cupom.
+  - `AuthFlowIT`: cadastro, login, rotação de refresh token com detecção de reuso e bloqueio de conta.
+- O CI roda tudo isso a cada push.
 
 ## Arquitetura
 
-```
-                    React (Vite)
-                         |  HTTP /api/**  e  WebSocket /ws
-                         v
-                    api-gateway  ---- JWT, CORS, rate limit (Redis), X-Request-Id
-                         |  lb:// (Eureka)
-     +---------+---------+----------+-----------+-------------+
-     v         v         v          v           v             v
-   auth   restaurant   order     payment     delivery    notification
-              ^          |  ^  Feign + Resilience4j            |  e-mail (Mailpit)
-              |          |  +--- cotação / cobrança            |  STOMP -> navegador
-              |          v
-              +------ RabbitMQ (exchange rota.events) ------+--+
+```mermaid
+flowchart TB
+    web["React (nginx / Vite)"] -->|"HTTP /api/** e WebSocket /ws"| gw["api-gateway<br/>JWT, CORS, rate limit, Swagger UI"]
+    gw -.->|descobre os serviços| eureka[(Eureka)]
+    gw --> auth[auth-service]
+    gw --> restaurant[restaurant-service]
+    gw --> order[order-service]
+    gw --> payment[payment-service]
+    gw --> delivery[delivery-service]
+    gw -->|STOMP| notification[notification-service]
+
+    order -->|"Feign + Resilience4j: cotação"| restaurant
+    order -->|"Feign + Resilience4j: cobrança"| payment
+
+    order -->|outbox| mq{{"RabbitMQ<br/>exchange rota.events"}}
+    delivery --> mq
+    mq --> order
+    mq --> delivery
+    mq --> restaurant
+    mq --> notification
+    notification -->|e-mail| mail[(Mailpit)]
+
+    auth --- pg[(PostgreSQL<br/>um banco por serviço)]
+    restaurant --- pg
+    order --- pg
+    payment --- pg
+    delivery --- pg
+    order --- redis[(Redis<br/>carrinho, cache, rate limit)]
+    restaurant --- redis
 ```
 
 Só duas chamadas continuam síncronas, porque o usuário espera a resposta: a **cotação** no catálogo
@@ -136,12 +173,51 @@ O resto da integração é por eventos:
 
 ## Fluxo de um pedido
 
+```mermaid
+sequenceDiagram
+    actor C as Cliente
+    participant O as order-service
+    participant R as restaurant-service
+    participant P as payment-service
+    participant MQ as RabbitMQ
+    participant D as delivery-service
+    actor E as Entregador
+
+    C->>O: POST /orders (checkout)
+    O->>R: recota os itens (Feign)
+    R-->>O: preços atuais e taxa
+    O->>O: aplica cupom e grava o pedido + evento no outbox
+    O->>P: cobra (Feign, retry e circuit breaker)
+    P-->>O: aprovado
+    O-->>C: 201 PAID
+    Note over O,MQ: o relay publica o outbox com publisher confirms
+    O->>MQ: order.status-changed
+    Note over C,O: restaurante aceita, prepara e marca como pronto
+    O->>MQ: order.ready-for-pickup
+    MQ->>D: abre a corrida
+    E->>D: aceita, retira e entrega
+    D->>MQ: delivery.status-changed e driver.location-updated
+    MQ->>O: avança o pedido até DELIVERED
 ```
-Cliente      checkout -------> order-service: recota (Feign) -> cupom -> cobra (Feign) -> PAID
-Restaurante  aceita/prepara/pronto ------> order.ready-for-pickup ------> delivery-service abre a corrida
-Entregador   aceita/retira/entrega ------> delivery.status-changed -----> order-service avança o pedido
-Cliente      acompanha no mapa <--------- driver.location-updated <------ posição do entregador
-Cliente      avalia ----------------------> review.created -------------> restaurant-service atualiza a média
+
+A máquina de estados do pedido (`OrderStatus`) aceita só estas transições; qualquer outra responde 409:
+
+```mermaid
+stateDiagram-v2
+    [*] --> CREATED
+    CREATED --> PAYMENT_PENDING
+    PAYMENT_PENDING --> PAID
+    PAID --> RESTAURANT_ACCEPTED
+    RESTAURANT_ACCEPTED --> PREPARING
+    PREPARING --> READY_FOR_PICKUP
+    READY_FOR_PICKUP --> OUT_FOR_DELIVERY
+    OUT_FOR_DELIVERY --> DELIVERED
+    CREATED --> CANCELLED
+    PAYMENT_PENDING --> CANCELLED
+    PAID --> CANCELLED
+    RESTAURANT_ACCEPTED --> CANCELLED
+    DELIVERED --> [*]
+    CANCELLED --> [*]
 ```
 
 ## Destaques
@@ -195,4 +271,4 @@ Cliente      avalia ----------------------> review.created -------------> restau
 - [x] Fase 2 — Negócio: Payment, Coupon, Rating, Delivery
 - [x] Fase 3 — Distribuído: RabbitMQ, Redis, WebSocket, Gateway, Eureka, Resilience4j
 - [x] Fase 4 — Produção: Docker, CI/CD, Prometheus, Grafana, OpenTelemetry
-- [ ] Fase 5 — Qualidade: testes unitários e de integração, segurança, documentação
+- [x] Fase 5 — Qualidade: testes unitários e de integração, segurança, documentação
