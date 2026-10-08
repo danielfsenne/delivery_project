@@ -68,6 +68,37 @@ spring:
                 - Path=/api/deliveries/**
               filters:
                 - StripPrefix=1
+            # Spec OpenAPI de cada serviço, para o Swagger UI do gateway: /docs/order -> order-service/v3/api-docs
+            - id: docs-auth
+              uri: lb://auth-service
+              predicates:
+                - Path=/docs/auth
+              filters:
+                - SetPath=/v3/api-docs
+            - id: docs-restaurant
+              uri: lb://restaurant-service
+              predicates:
+                - Path=/docs/restaurant
+              filters:
+                - SetPath=/v3/api-docs
+            - id: docs-order
+              uri: lb://order-service
+              predicates:
+                - Path=/docs/order
+              filters:
+                - SetPath=/v3/api-docs
+            - id: docs-payment
+              uri: lb://payment-service
+              predicates:
+                - Path=/docs/payment
+              filters:
+                - SetPath=/v3/api-docs
+            - id: docs-delivery
+              uri: lb://delivery-service
+              predicates:
+                - Path=/docs/delivery
+              filters:
+                - SetPath=/v3/api-docs
             # WebSocket (STOMP) das notificações em tempo real; o token vai no frame CONNECT.
             - id: realtime
               uri: lb:ws://notification-service
@@ -90,6 +121,24 @@ eureka:
   instance:
     prefer-ip-address: true
     lease-renewal-interval-in-seconds: 10
+
+# Swagger UI em http://localhost:8080/swagger-ui.html, com um seletor por serviço.
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls-primary-name: order-service
+    urls:
+      - name: auth-service
+        url: /docs/auth
+      - name: restaurant-service
+        url: /docs/restaurant
+      - name: order-service
+        url: /docs/order
+      - name: payment-service
+        url: /docs/payment
+      - name: delivery-service
+        url: /docs/delivery
+    persist-authorization: true
 
 rota:
   jwt:
