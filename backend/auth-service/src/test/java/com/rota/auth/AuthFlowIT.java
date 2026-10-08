@@ -149,7 +149,7 @@ class AuthFlowIT {
         mvc.perform(get("/auth/admin/users").param("role", "DRIVER").param("q", marker)
                         .header("Authorization", admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.page.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].email").value("motorista-" + marker + "@rota.dev"));
     }
 
