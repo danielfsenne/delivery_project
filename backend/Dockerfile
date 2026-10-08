@@ -9,7 +9,7 @@ ARG MODULE
 WORKDIR /workspace
 COPY . .
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -B -q -pl ${MODULE} -am package -DskipTests \
+    mvn -B --no-transfer-progress -pl ${MODULE} -am package -DskipTests \
     && cp ${MODULE}/target/${MODULE}-*.jar /app.jar
 
 # 2) Separa o jar em camadas: dependências (mudam pouco) e o código da aplicação (muda sempre).
