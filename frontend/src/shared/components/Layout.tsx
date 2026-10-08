@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Bike, LogOut, Receipt, ShoppingBag, Store, User } from 'lucide-react'
+import { Bike, LogOut, Receipt, Shield, ShoppingBag, Store, User } from 'lucide-react'
 import { useAuthStore } from '@/core/auth/auth-store'
 import { useCart } from '@/features/cart/api'
 import { logout as logoutRequest } from '@/features/auth/api'
@@ -54,6 +54,11 @@ export function Layout() {
             {user?.role === 'DRIVER' && (
               <NavLink to="/driver" className="flex items-center gap-1 hover:text-brand-600">
                 <Bike size={18} /> <span className="hidden sm:inline">Entregas</span>
+              </NavLink>
+            )}
+            {user?.role === 'ADMIN' && (
+              <NavLink to="/admin" className="flex items-center gap-1 hover:text-brand-600">
+                <Shield size={18} /> <span className="hidden sm:inline">Administração</span>
               </NavLink>
             )}
             {user ? (
