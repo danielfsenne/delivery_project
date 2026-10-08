@@ -3,3 +3,4 @@ com.rota.common.security.JwtAutoConfiguration
 com.rota.common.messaging.RabbitMessagingAutoConfiguration
 com.rota.common.messaging.outbox.OutboxAutoConfiguration
 com.rota.common.observability.ObservabilityAutoConfiguration
+com.rota.common.web.OpenApiAutoConfiguration
