@@ -1,4 +1,4 @@
-import type { AuthUser } from '@/core/auth/auth-store'
+import type { AuthUser, Role } from '@/core/auth/auth-store'
 
 export interface Page<T> {
   content: T[]
@@ -176,6 +176,45 @@ export interface RestaurantStats {
   averageTicket: number
   cancelledToday: number
   inProgress: number
+}
+
+export interface TopRestaurant {
+  restaurantId: number
+  restaurantName: string
+  orders: number
+  revenue: number
+}
+
+export interface PlatformStats extends RestaurantStats {
+  awaitingPayment: number
+  topRestaurants: TopRestaurant[]
+}
+
+export type CouponType = 'PERCENTAGE' | 'FIXED'
+
+export interface Coupon {
+  id: number
+  code: string
+  description: string | null
+  type: CouponType
+  value: number
+  minOrderValue: number
+  maxDiscount: number | null
+  validUntil: string | null
+  usageLimit: number | null
+  usedCount: number
+  restaurantId: number | null
+  active: boolean
+}
+
+export interface AdminUser {
+  id: number
+  name: string
+  email: string
+  role: Role
+  phone: string | null
+  active: boolean
+  createdAt: string
 }
 
 export type DriverStatus = 'ONLINE' | 'OFFLINE' | 'BUSY'
