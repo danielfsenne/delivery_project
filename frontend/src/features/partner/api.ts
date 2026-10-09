@@ -35,7 +35,7 @@ export function useUpdateRestaurant(restaurantId: number) {
   )
 }
 
-/** Abre ou pausa a loja; pausada, ela some como fechada mesmo dentro do horário. */
+/** Abre ou pausa a loja; pausada, ela some do catálogo e não recebe pedidos, mesmo dentro do horário. */
 export function useSetRestaurantActive(restaurantId: number) {
   return useMenuMutation(restaurantId, async (active: boolean) =>
     (await api.patch<RestaurantDetail>(`/restaurants/mine/${restaurantId}/status`, { active })).data,

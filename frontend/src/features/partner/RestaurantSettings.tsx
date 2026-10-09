@@ -15,7 +15,7 @@ export function RestaurantSettings({ restaurantId }: { restaurantId: number }) {
   if (isError || !restaurant) return <ErrorMessage message={toApiError(error).message} />
 
   const status = !restaurant.active
-    ? { label: 'Pausado', className: 'bg-gray-200 text-gray-700', hint: 'Não aparece como aberto e não recebe pedidos.' }
+    ? { label: 'Pausado', className: 'bg-gray-200 text-gray-700', hint: 'Some da lista de restaurantes e não recebe pedidos até ser reaberto.' }
     : restaurant.open
       ? { label: 'Aberto agora', className: 'bg-green-100 text-green-800', hint: 'Recebendo pedidos.' }
       : { label: 'Fora do horário', className: 'bg-amber-100 text-amber-800', hint: 'Abre de novo no próximo horário de funcionamento.' }
