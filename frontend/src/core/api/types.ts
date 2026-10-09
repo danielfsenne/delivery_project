@@ -65,10 +65,20 @@ export interface Category {
   products: Product[]
 }
 
+export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'
+
+/** Horários no formato do Java (HH:mm:ss); se closesAt < opensAt, fecha no dia seguinte. */
+export interface OpeningHour {
+  dayOfWeek: DayOfWeek
+  opensAt: string
+  closesAt: string
+}
+
 export interface RestaurantDetail extends Omit<RestaurantSummary, 'city' | 'district'> {
   ownerId: number
   phone: string | null
   address: Address
+  openingHours: OpeningHour[]
   categories: Category[]
 }
 

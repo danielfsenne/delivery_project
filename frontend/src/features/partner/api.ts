@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/core/api/client'
 import type { Order, OrderStatus, Page, RestaurantDetail, RestaurantStats, RestaurantSummary } from '@/core/api/types'
 import { usePollingInterval } from '@/core/realtime/status'
+import type { RestaurantRequest } from './restaurantForm'
 
 /** Status que aparecem no quadro de pedidos do restaurante. */
 export const boardStatuses: OrderStatus[] = [
@@ -17,6 +18,28 @@ export function useMyRestaurants() {
     queryKey: ['partner', 'restaurants'],
     queryFn: async () => (await api.get<RestaurantSummary[]>('/restaurants/mine')).data,
   })
+}
+
+export function useCreateRestaurant() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: RestaurantRequest) =>
+      (await api.post<RestaurantDetail>('/restaurants/mine', input)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['partner', 'restaurants'] }),
+  })
+}
+
+export function useUpdateRestaurant(restaurantId: number) {
+  return useMenuMutation(restaurantId, async (input: RestaurantRequest) =>
+    (await api.put<RestaurantDetail>(`/restaurants/mine/${restaurantId}`, input)).data,
+  )
+}
+
+/** Abre ou pausa a loja; pausada, ela some como fechada mesmo dentro do horário. */
+export function useSetRestaurantActive(restaurantId: number) {
+  return useMenuMutation(restaurantId, async (active: boolean) =>
+    (await api.patch<RestaurantDetail>(`/restaurants/mine/${restaurantId}/status`, { active })).data,
+  )
 }
 
 export function useRestaurantStats(restaurantId: number | undefined) {
@@ -69,6 +92,8 @@ function useMenuMutation<TInput>(restaurantId: number, fn: (input: TInput) => Pr
     onSuccess: (restaurant) => {
       queryClient.setQueryData(['partner', restaurantId, 'menu'], restaurant)
       queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] })
+      // Nome, taxa e status aparecem na lista de restaurantes do dono.
+      queryClient.invalidateQueries({ queryKey: ['partner', 'restaurants'] })
     },
   })
 }
