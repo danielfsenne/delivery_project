@@ -1,20 +1,28 @@
 import { useState, type FormEvent } from 'react'
-import { Plus } from 'lucide-react'
+import { ListPlus, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { Category, Product } from '@/core/api/types'
 import { toApiError } from '@/core/api/client'
-import { useAddCategory, useAddProduct, useManagedRestaurant, useSetAvailability, useUpdateProduct } from './api'
+import {
+  useAddCategory,
+  useAddProduct,
+  useDeleteCategory,
+  useDeleteProduct,
+  useManagedRestaurant,
+  useRenameCategory,
+  useSetAvailability,
+  useUpdateProduct,
+} from './api'
+import { parsePrice } from './price'
+import { ProductOptionsEditor } from './ProductOptionsEditor'
 import { cn, formatCurrency } from '@/shared/lib/format'
 import { Button, Card, ErrorMessage, Spinner } from '@/shared/components/ui'
-
-function parsePrice(value: string): number | null {
-  const n = Number(value.replace(',', '.'))
-  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null
-}
 
 function ProductRow({ restaurantId, product }: { restaurantId: number; product: Product }) {
   const availability = useSetAvailability(restaurantId)
   const update = useUpdateProduct(restaurantId)
+  const remove = useDeleteProduct(restaurantId)
   const [editing, setEditing] = useState(false)
+  const [showOptions, setShowOptions] = useState(false)
   const [price, setPrice] = useState(product.price.toFixed(2).replace('.', ','))
 
   const savePrice = (e: FormEvent) => {
@@ -66,9 +74,33 @@ function ProductRow({ restaurantId, product }: { restaurantId: number; product: 
         />
         {product.available ? 'Disponível' : 'Esgotado'}
       </label>
-      {(update.isError || availability.isError) && (
-        <p className="w-full text-xs text-red-600">{toApiError(update.error ?? availability.error).message}</p>
+
+      <button
+        onClick={() => setShowOptions((v) => !v)}
+        aria-expanded={showOptions}
+        className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-600"
+        title="Adicionais"
+      >
+        <ListPlus size={16} />
+        {product.options.length > 0 && product.options.length}
+      </button>
+      <button
+        onClick={() => {
+          if (window.confirm(`Excluir "${product.name}" do cardápio?`)) remove.mutate(product.id)
+        }}
+        disabled={remove.isPending}
+        aria-label={`Excluir ${product.name}`}
+        className="text-gray-400 hover:text-red-600"
+      >
+        <Trash2 size={16} />
+      </button>
+
+      {(update.isError || availability.isError || remove.isError) && (
+        <p className="w-full text-xs text-red-600">
+          {toApiError(update.error ?? availability.error ?? remove.error).message}
+        </p>
       )}
+      {showOptions && <ProductOptionsEditor restaurantId={restaurantId} product={product} />}
     </li>
   )
 }
@@ -122,6 +154,59 @@ function AddProductForm({ restaurantId, category }: { restaurantId: number; cate
   )
 }
 
+function CategoryHeader({ restaurantId, category }: { restaurantId: number; category: Category }) {
+  const rename = useRenameCategory(restaurantId)
+  const remove = useDeleteCategory(restaurantId)
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(category.name)
+
+  const save = (e: FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    rename.mutate(
+      { categoryId: category.id, name: name.trim(), position: category.position },
+      { onSuccess: () => setEditing(false) },
+    )
+  }
+
+  const confirmDelete = () => {
+    const count = category.products.length
+    const warning = count > 0 ? ` Os ${count} produto(s) dela também serão excluídos.` : ''
+    if (window.confirm(`Excluir a categoria "${category.name}"?${warning}`)) remove.mutate(category.id)
+  }
+
+  return (
+    <div>
+      {editing ? (
+        <form onSubmit={save} className="flex items-center gap-2">
+          <input value={name} onChange={(e) => setName(e.target.value)} aria-label="Nome da categoria" maxLength={80}
+                 className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm font-semibold" autoFocus />
+          <Button type="submit" className="px-2 py-1" loading={rename.isPending}>Salvar</Button>
+          <Button type="button" variant="ghost" className="px-2 py-1" onClick={() => {
+            setName(category.name)
+            setEditing(false)
+          }}>Cancelar</Button>
+        </form>
+      ) : (
+        <div className="flex items-center gap-2">
+          <h3 className="flex-1 font-semibold">{category.name}</h3>
+          <button onClick={() => setEditing(true)} aria-label={`Renomear ${category.name}`}
+                  className="text-gray-400 hover:text-brand-600">
+            <Pencil size={16} />
+          </button>
+          <button onClick={confirmDelete} disabled={remove.isPending} aria-label={`Excluir ${category.name}`}
+                  className="text-gray-400 hover:text-red-600">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      )}
+      {(rename.isError || remove.isError) && (
+        <p className="mt-1 text-xs text-red-600">{toApiError(rename.error ?? remove.error).message}</p>
+      )}
+    </div>
+  )
+}
+
 export function MenuManager({ restaurantId }: { restaurantId: number }) {
   const { data: restaurant, isLoading, isError, error } = useManagedRestaurant(restaurantId)
   const addCategory = useAddCategory(restaurantId)
@@ -139,7 +224,7 @@ export function MenuManager({ restaurantId }: { restaurantId: number }) {
     <div className="space-y-4">
       {restaurant.categories.map((category) => (
         <Card key={category.id} className="p-4">
-          <h3 className="font-semibold">{category.name}</h3>
+          <CategoryHeader restaurantId={restaurantId} category={category} />
           <ul className="divide-y divide-gray-100">
             {category.products.map((product) => (
               <ProductRow key={product.id} restaurantId={restaurantId} product={product} />
