@@ -36,10 +36,10 @@ export function PromoBanners() {
           key={b.code}
           className={`relative flex h-40 min-w-[280px] flex-1 snap-start overflow-hidden rounded-2xl bg-gradient-to-br ${b.className} text-white`}
         >
-          <div className="z-10 flex flex-col justify-center gap-1 p-5 pr-0">
+          <div className="z-10 flex w-[60%] flex-col justify-center gap-1 p-5 pr-0">
             <p className="text-2xl font-black leading-none">{b.title}</p>
-            <p className="max-w-[11rem] text-sm text-white/90">{b.subtitle}</p>
-            <p className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur">
+            <p className="text-sm leading-snug text-white/90">{b.subtitle}</p>
+            <p className="mt-2 inline-flex w-fit items-center whitespace-nowrap gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur">
               <Ticket size={14} /> Cupom {b.code}
             </p>
           </div>
@@ -47,7 +47,7 @@ export function PromoBanners() {
             src={b.image}
             alt=""
             loading="lazy"
-            className="absolute -right-6 top-1/2 h-36 w-36 -translate-y-1/2 rounded-full object-cover shadow-xl ring-4 ring-white/30"
+            className="absolute -right-6 top-1/2 h-28 w-28 -translate-y-1/2 sm:h-36 sm:w-36 rounded-full object-cover shadow-xl ring-4 ring-white/30"
           />
         </article>
       ))}

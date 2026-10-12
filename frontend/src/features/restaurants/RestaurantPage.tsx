@@ -66,7 +66,7 @@ export function RestaurantPage() {
             <FoodImage
               src={restaurant.imageUrl}
               name={restaurant.name}
-              className="-mt-10 h-24 w-24 shrink-0 rounded-full border-4 border-white text-4xl shadow-card"
+              className="relative z-10 -mt-10 h-24 w-24 shrink-0 rounded-full border-4 border-white text-4xl shadow-card"
             />
             <div className="pb-1">
               <h1 className="text-2xl font-black leading-tight sm:text-3xl">{restaurant.name}</h1>

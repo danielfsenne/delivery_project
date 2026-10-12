@@ -22,7 +22,7 @@ export function RestaurantCard({ restaurant: r }: { restaurant: RestaurantSummar
       />
       <div className="min-w-0 flex-1">
         <h3 className="truncate font-bold text-gray-900">{r.name}</h3>
-        <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-gray-500">
+        <p className="mt-0.5 flex items-center gap-x-1.5 whitespace-nowrap text-sm text-gray-500">
           {r.ratingAverage !== null && r.ratingCount > 0 ? (
             <span className="flex items-center gap-0.5 font-bold text-amber-500" title={`${r.ratingCount} avaliações`}>
               <Star size={13} className="fill-amber-400 text-amber-400" aria-hidden /> {r.ratingAverage.toFixed(1)}
@@ -33,7 +33,7 @@ export function RestaurantCard({ restaurant: r }: { restaurant: RestaurantSummar
           <Dot />
           <span>{r.cuisine}</span>
           <Dot />
-          <span className="truncate">{r.district}</span>
+          <span className="min-w-0 truncate">{r.district}</span>
         </p>
         <p className="mt-0.5 flex items-center gap-1.5 text-sm text-gray-500">
           {r.open ? `${r.deliveryTimeMin}-${r.deliveryTimeMax} min` : <span className="font-semibold">Fechado agora</span>}
