@@ -94,6 +94,9 @@ Para testar:
 - **Cliente**: cupons `SAVE10` (10%, mín. R$ 50), `BEMVINDO` (R$ 15, mín. R$ 40) e `PIZZA20` (só no Forno da Nonna).
 - **Pagamento fake**: Pix sempre aprovado; cartão recusado acima de R$ 500; dinheiro é confirmado na hora.
 - **Restaurante**: em `/partner`, aceite o pedido, inicie o preparo e marque como pronto. Isso abre a corrida.
+  Na mesma tela, cadastre um restaurante novo (endereço com posição no mapa e horários por dia), edite os
+  dados ou pause a loja, que some do catálogo. Na aba Cardápio, crie, renomeie, reordene e exclua
+  categorias; adicione, edite e exclua produtos; marque um item como esgotado e cadastre adicionais.
 - **Entregador**: em `/driver`, fique online, use a posição de demonstração e aceite a entrega.
 - **Tempo real**: abra o pedido como cliente em uma janela e o painel do restaurante ou do entregador em
   outra (janela anônima). Status, avisos e a posição do entregador no mapa mudam sem recarregar.
@@ -116,7 +119,7 @@ cd frontend && npm test           # front (Vitest)
 ```
 
 - **Unitários** (JUnit 5, Mockito, AssertJ): máquina de estados, cupons, carrinho, políticas de acesso,
-  outbox, resiliência do cliente de pagamento e autoconfigurações do `common`.
+  outbox, resiliência do cliente de pagamento, horários e ordem do cardápio, e autoconfigurações do `common`.
 - **Integração** (`*IT`, Testcontainers): sobem o serviço inteiro contra **Postgres, Redis e RabbitMQ reais**.
   Só as chamadas a outros serviços são dublês.
   - `OrderFlowIT`: carrinho, cupom, checkout, pagamento, avanço pelo restaurante e os eventos que o outbox
@@ -238,6 +241,8 @@ stateDiagram-v2
   Spring Data ao salvar; nenhum caminho de código consegue mudar o status sem notificar.
 - **Resiliência**: com o payment-service fora, o circuito abre após falhas seguidas, o checkout responde
   na hora e o pedido fica aguardando pagamento até o serviço voltar.
+- **Cardápio como agregado**: categorias, produtos e adicionais só mudam pelo `Restaurant`, sempre
+  verificando o dono. Reordenar as categorias é uma operação só, que exige a lista completa e roda numa transação.
 - **Cache transacional**: busca e detalhe de restaurantes no Redis, invalidados só depois do commit.
 - **Gateway**: rejeita token inválido antes de chegar aos serviços, bloqueia `/internal/**` e limita
   o login a 10 tentativas seguidas por IP.
@@ -272,3 +277,5 @@ stateDiagram-v2
 - [x] Fase 3 — Distribuído: RabbitMQ, Redis, WebSocket, Gateway, Eureka, Resilience4j
 - [x] Fase 4 — Produção: Docker, CI/CD, Prometheus, Grafana, OpenTelemetry
 - [x] Fase 5 — Qualidade: testes unitários e de integração, segurança, documentação
+- [x] Painel do restaurante completo: cadastro e edição do restaurante, pausa da loja e gestão do cardápio
+- [ ] Deploy em nuvem
