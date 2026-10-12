@@ -140,6 +140,13 @@ export function useRenameCategory(restaurantId: number) {
   )
 }
 
+/** Envia a ordem completa das categorias; o backend aplica tudo numa transação. */
+export function useReorderCategories(restaurantId: number) {
+  return useMenuMutation(restaurantId, async (categoryIds: number[]) =>
+    (await api.put<RestaurantDetail>(`/restaurants/mine/${restaurantId}/categories/order`, { categoryIds })).data,
+  )
+}
+
 export function useAddOption(restaurantId: number) {
   return useMenuMutation(
     restaurantId,

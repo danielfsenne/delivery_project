@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { ListPlus, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ListPlus, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { Category, Product } from '@/core/api/types'
 import { toApiError } from '@/core/api/client'
 import {
@@ -9,9 +9,11 @@ import {
   useDeleteProduct,
   useManagedRestaurant,
   useRenameCategory,
+  useReorderCategories,
   useSetAvailability,
   useUpdateProduct,
 } from './api'
+import { moveItem } from './menuOrder'
 import { ProductForm } from './ProductForm'
 import { ProductOptionsEditor } from './ProductOptionsEditor'
 import { cn, formatCurrency } from '@/shared/lib/format'
@@ -124,7 +126,15 @@ function AddProductForm({ restaurantId, category }: { restaurantId: number; cate
   )
 }
 
-function CategoryHeader({ restaurantId, category }: { restaurantId: number; category: Category }) {
+interface CategoryHeaderProps {
+  restaurantId: number
+  category: Category
+  /** Ausente quando a categoria já está na ponta ou há outra reordenação em andamento. */
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+}
+
+function CategoryHeader({ restaurantId, category, onMoveUp, onMoveDown }: CategoryHeaderProps) {
   const rename = useRenameCategory(restaurantId)
   const remove = useDeleteCategory(restaurantId)
   const [editing, setEditing] = useState(false)
@@ -160,6 +170,14 @@ function CategoryHeader({ restaurantId, category }: { restaurantId: number; cate
       ) : (
         <div className="flex items-center gap-2">
           <h3 className="flex-1 font-semibold">{category.name}</h3>
+          <button onClick={onMoveUp} disabled={!onMoveUp} aria-label={`Subir ${category.name}`}
+                  className="text-gray-400 hover:text-brand-600 disabled:opacity-30 disabled:hover:text-gray-400">
+            <ArrowUp size={16} />
+          </button>
+          <button onClick={onMoveDown} disabled={!onMoveDown} aria-label={`Descer ${category.name}`}
+                  className="text-gray-400 hover:text-brand-600 disabled:opacity-30 disabled:hover:text-gray-400">
+            <ArrowDown size={16} />
+          </button>
           <button onClick={() => setEditing(true)} aria-label={`Renomear ${category.name}`}
                   className="text-gray-400 hover:text-brand-600">
             <Pencil size={16} />
@@ -180,6 +198,7 @@ function CategoryHeader({ restaurantId, category }: { restaurantId: number; cate
 export function MenuManager({ restaurantId }: { restaurantId: number }) {
   const { data: restaurant, isLoading, isError, error } = useManagedRestaurant(restaurantId)
   const addCategory = useAddCategory(restaurantId)
+  const reorder = useReorderCategories(restaurantId)
   const [categoryName, setCategoryName] = useState('')
 
   if (isLoading) return <Spinner />
@@ -190,11 +209,21 @@ export function MenuManager({ restaurantId }: { restaurantId: number }) {
     if (categoryName.trim()) addCategory.mutate(categoryName.trim(), { onSuccess: () => setCategoryName('') })
   }
 
+  const ids = restaurant.categories.map((c) => c.id)
+  const move = (index: number, direction: -1 | 1) => () => reorder.mutate(moveItem(ids, index, direction))
+  const last = ids.length - 1
+
   return (
     <div className="space-y-4">
-      {restaurant.categories.map((category) => (
+      {reorder.isError && <ErrorMessage message={toApiError(reorder.error).message} />}
+      {restaurant.categories.map((category, index) => (
         <Card key={category.id} className="p-4">
-          <CategoryHeader restaurantId={restaurantId} category={category} />
+          <CategoryHeader
+            restaurantId={restaurantId}
+            category={category}
+            onMoveUp={index > 0 && !reorder.isPending ? move(index, -1) : undefined}
+            onMoveDown={index < last && !reorder.isPending ? move(index, 1) : undefined}
+          />
           <ul className="divide-y divide-gray-100">
             {category.products.map((product) => (
               <ProductRow key={product.id} restaurantId={restaurantId} product={product} />
