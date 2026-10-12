@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Bike, MapPin } from 'lucide-react'
+import { MapPin, Navigation } from 'lucide-react'
 import type { Coordinates, DeliveryStatus } from '@/core/api/types'
 import { useTracking } from './api'
 import { formatTime } from '@/shared/lib/format'
@@ -38,7 +38,7 @@ export function TrackingCard({ orderId }: { orderId: number }) {
     <Card className="p-5">
       <div className="flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600">
-          <Bike size={20} />
+          <Navigation size={20} />
         </span>
         <div>
           <p className="font-semibold">{deliveryLabel[tracking.status]}</p>
