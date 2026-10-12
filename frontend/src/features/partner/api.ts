@@ -131,3 +131,49 @@ export function useAddCategory(restaurantId: number) {
     (await api.post<RestaurantDetail>(`/restaurants/mine/${restaurantId}/categories`, { name })).data,
   )
 }
+
+export function useRenameCategory(restaurantId: number) {
+  return useMenuMutation(
+    restaurantId,
+    async ({ categoryId, ...input }: { categoryId: number; name: string; position: number }) =>
+      (await api.put<RestaurantDetail>(`/restaurants/mine/${restaurantId}/categories/${categoryId}`, input)).data,
+  )
+}
+
+export function useAddOption(restaurantId: number) {
+  return useMenuMutation(
+    restaurantId,
+    async ({ productId, ...input }: { productId: number; name: string; price: number }) =>
+      (await api.post<RestaurantDetail>(`/restaurants/mine/${restaurantId}/products/${productId}/options`, input)).data,
+  )
+}
+
+/** Exclusões respondem 204 sem corpo: em vez de gravar a resposta no cache, o cardápio é recarregado. */
+function useMenuDeletion<TInput>(restaurantId: number, fn: (input: TInput) => Promise<unknown>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['partner', restaurantId, 'menu'] })
+      queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId] })
+    },
+  })
+}
+
+export function useDeleteCategory(restaurantId: number) {
+  return useMenuDeletion(restaurantId, (categoryId: number) =>
+    api.delete(`/restaurants/mine/${restaurantId}/categories/${categoryId}`),
+  )
+}
+
+export function useDeleteProduct(restaurantId: number) {
+  return useMenuDeletion(restaurantId, (productId: number) =>
+    api.delete(`/restaurants/mine/${restaurantId}/products/${productId}`),
+  )
+}
+
+export function useDeleteOption(restaurantId: number) {
+  return useMenuDeletion(restaurantId, ({ productId, optionId }: { productId: number; optionId: number }) =>
+    api.delete(`/restaurants/mine/${restaurantId}/products/${productId}/options/${optionId}`),
+  )
+}
