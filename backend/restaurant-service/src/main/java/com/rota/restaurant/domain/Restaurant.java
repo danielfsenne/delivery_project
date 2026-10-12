@@ -1,5 +1,6 @@
 package com.rota.restaurant.domain;
 
+import com.rota.common.exception.BusinessException;
 import com.rota.common.exception.NotFoundException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
@@ -19,7 +20,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Raiz do agregado do catálogo: categorias, produtos e complementos são alterados
@@ -113,10 +117,27 @@ public class Restaurant {
         this.active = active;
     }
 
+    /** A nova categoria vai para o fim; usar o tamanho da lista repetiria posições depois de uma exclusão. */
     public Category addCategory(String name) {
-        Category category = new Category(this, name, categories.size());
+        int next = categories.stream().mapToInt(Category::getPosition).max().orElse(-1) + 1;
+        Category category = new Category(this, name, next);
         categories.add(category);
         return category;
+    }
+
+    /**
+     * Reordena o cardápio de uma vez: a lista precisa trazer cada categoria exatamente uma vez.
+     * A coleção em memória também é reordenada, porque o {@code @OrderBy} só vale ao carregar do banco.
+     */
+    public void reorderCategories(List<Long> categoryIds) {
+        Set<Long> current = categories.stream().map(Category::getId).collect(Collectors.toSet());
+        if (categoryIds.size() != current.size() || !current.equals(Set.copyOf(categoryIds))) {
+            throw new BusinessException("A nova ordem precisa conter todas as categorias do restaurante, sem repetição");
+        }
+        for (int i = 0; i < categoryIds.size(); i++) {
+            category(categoryIds.get(i)).moveTo(i);
+        }
+        categories.sort(Comparator.comparingInt(Category::getPosition));
     }
 
     public Category category(Long categoryId) {
