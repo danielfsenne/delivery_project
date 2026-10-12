@@ -10,6 +10,7 @@ import com.rota.restaurant.domain.Category;
 import com.rota.restaurant.domain.Product;
 import com.rota.restaurant.domain.Restaurant;
 import com.rota.restaurant.domain.RestaurantRepository;
+import com.rota.restaurant.interfaces.rest.dto.MenuRequests.CategoryOrderRequest;
 import com.rota.restaurant.interfaces.rest.dto.MenuRequests.CategoryRequest;
 import com.rota.restaurant.interfaces.rest.dto.MenuRequests.OptionRequest;
 import com.rota.restaurant.interfaces.rest.dto.MenuRequests.ProductRequest;
@@ -88,6 +89,14 @@ public class RestaurantManagementService {
         if (request.position() != null) {
             category.moveTo(request.position());
         }
+        return toDetail(restaurant);
+    }
+
+    @EvictsRestaurantCache
+    public RestaurantDetailResponse reorderCategories(AuthenticatedUser user, Long restaurantId,
+                                                      CategoryOrderRequest request) {
+        Restaurant restaurant = owned(user, restaurantId);
+        restaurant.reorderCategories(request.categoryIds());
         return toDetail(restaurant);
     }
 

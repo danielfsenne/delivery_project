@@ -3,6 +3,7 @@ package com.rota.restaurant.interfaces.rest;
 import com.rota.common.security.AuthenticatedUser;
 import com.rota.restaurant.application.RestaurantManagementService;
 import com.rota.restaurant.interfaces.rest.dto.MenuRequests.AvailabilityRequest;
+import com.rota.restaurant.interfaces.rest.dto.MenuRequests.CategoryOrderRequest;
 import com.rota.restaurant.interfaces.rest.dto.MenuRequests.CategoryRequest;
 import com.rota.restaurant.interfaces.rest.dto.MenuRequests.OptionRequest;
 import com.rota.restaurant.interfaces.rest.dto.MenuRequests.ProductRequest;
@@ -81,6 +82,13 @@ public class RestaurantManagementController {
                                                    @PathVariable Long id, @PathVariable Long categoryId,
                                                    @Valid @RequestBody CategoryRequest request) {
         return service.updateCategory(user, id, categoryId, request);
+    }
+
+    @PutMapping("/{id}/categories/order")
+    public RestaurantDetailResponse reorderCategories(@AuthenticationPrincipal AuthenticatedUser user,
+                                                      @PathVariable Long id,
+                                                      @Valid @RequestBody CategoryOrderRequest request) {
+        return service.reorderCategories(user, id, request);
     }
 
     @DeleteMapping("/{id}/categories/{categoryId}")
