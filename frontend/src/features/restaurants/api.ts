@@ -5,6 +5,7 @@ import type { Page, RestaurantDetail, RestaurantSummary } from '@/core/api/types
 export interface RestaurantFilters {
   q?: string
   city?: string
+  cuisine?: string
 }
 
 export function useRestaurants(filters: RestaurantFilters) {
@@ -12,7 +13,12 @@ export function useRestaurants(filters: RestaurantFilters) {
     queryKey: ['restaurants', filters],
     queryFn: async () => {
       const { data } = await api.get<Page<RestaurantSummary>>('/restaurants', {
-        params: { q: filters.q || undefined, city: filters.city || undefined, size: 50 },
+        params: {
+          q: filters.q || undefined,
+          city: filters.city || undefined,
+          cuisine: filters.cuisine || undefined,
+          size: 50,
+        },
       })
       return data
     },
