@@ -91,6 +91,8 @@ Contas de demonstração (senha `rota12345`):
 
 Para testar:
 
+- **Catálogo**: 17 restaurantes de exemplo em Franca/SP, com fotos, notas e cardápio. Filtre por culinária,
+  entrega grátis ou tempo de entrega; o Masala House só abre no jantar e aparece em "Fechados agora".
 - **Cliente**: cupons `SAVE10` (10%, mín. R$ 50), `BEMVINDO` (R$ 15, mín. R$ 40) e `PIZZA20` (só no Forno da Nonna).
 - **Pagamento fake**: Pix sempre aprovado; cartão recusado acima de R$ 500; dinheiro é confirmado na hora.
 - **Restaurante**: em `/partner`, aceite o pedido, inicie o preparo e marque como pronto. Isso abre a corrida.
