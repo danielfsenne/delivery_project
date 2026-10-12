@@ -6,7 +6,7 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 const buttonVariants: Record<ButtonVariant, string> = {
   primary: 'bg-brand-500 text-white hover:bg-brand-600 disabled:bg-brand-500/50',
-  secondary: 'bg-white text-gray-900 border border-gray-300 hover:bg-gray-50',
+  secondary: 'bg-white text-brand-600 border border-brand-200 hover:bg-brand-50',
   ghost: 'text-gray-700 hover:bg-gray-100',
   danger: 'bg-red-600 text-white hover:bg-red-700',
 }
@@ -21,7 +21,7 @@ export function Button({ variant = 'primary', loading, disabled, className, chil
     <button
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-colors disabled:cursor-not-allowed',
         buttonVariants[variant],
         className,
       )}
@@ -64,7 +64,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 })
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn('rounded-xl bg-white border border-gray-200 shadow-sm', className)}>{children}</div>
+  return <div className={cn('rounded-2xl bg-white border border-gray-100 shadow-card', className)}>{children}</div>
 }
 
 export function Spinner({ label = 'Carregando...' }: { label?: string }) {

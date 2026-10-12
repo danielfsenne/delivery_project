@@ -3,5 +3,15 @@
 @tailwind utilities;
 
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply bg-white text-gray-900 antialiased;
+}
+
+@layer utilities {
+  /* Carrosséis horizontais (categorias, banners) rolam sem mostrar a barra. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
