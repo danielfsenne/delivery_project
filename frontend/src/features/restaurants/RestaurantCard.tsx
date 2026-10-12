@@ -1,48 +1,49 @@
 import { Link } from 'react-router-dom'
-import { Clock, Bike } from 'lucide-react'
+import { Star } from 'lucide-react'
 import type { RestaurantSummary } from '@/core/api/types'
-import { formatCurrency } from '@/shared/lib/format'
-import { Badge } from '@/shared/components/ui'
-import { Rating } from '@/shared/components/Rating'
+import { cn, formatCurrency } from '@/shared/lib/format'
+import { FoodImage } from '@/shared/components/FoodImage'
 
-export function RestaurantCard({ restaurant }: { restaurant: RestaurantSummary }) {
-  const r = restaurant
+const Dot = () => <span aria-hidden className="text-gray-300">•</span>
+
+export function RestaurantCard({ restaurant: r }: { restaurant: RestaurantSummary }) {
   return (
     <Link
       to={`/restaurants/${r.id}`}
-      className="group block rounded-xl bg-white border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition"
+      className={cn(
+        'group flex items-center gap-4 rounded-2xl p-3 transition hover:bg-gray-50',
+        !r.open && 'opacity-60 grayscale',
+      )}
     >
-      <div className="relative h-36 bg-gray-100">
-        {r.imageUrl && (
-          <img src={r.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition" />
-        )}
-        {!r.open && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <Badge className="bg-white text-gray-900">Fechado</Badge>
-          </div>
-        )}
-      </div>
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-lg leading-tight">{r.name}</h3>
-          <Rating average={r.ratingAverage} count={r.ratingCount} />
-        </div>
-        <p className="text-sm text-gray-500">
-          {r.cuisine} · {r.district}
+      <FoodImage
+        src={r.imageUrl}
+        name={r.name}
+        className="h-20 w-20 shrink-0 rounded-2xl border border-gray-100 text-3xl transition group-hover:scale-[1.03]"
+      />
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate font-bold text-gray-900">{r.name}</h3>
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-gray-500">
+          {r.ratingAverage !== null && r.ratingCount > 0 ? (
+            <span className="flex items-center gap-0.5 font-bold text-amber-500" title={`${r.ratingCount} avaliações`}>
+              <Star size={13} className="fill-amber-400 text-amber-400" aria-hidden /> {r.ratingAverage.toFixed(1)}
+            </span>
+          ) : (
+            <span className="font-bold text-brand-500">Novo</span>
+          )}
+          <Dot />
+          <span>{r.cuisine}</span>
+          <Dot />
+          <span className="truncate">{r.district}</span>
         </p>
-        <div className="mt-3 flex items-center gap-4 text-sm text-gray-600">
-          <span className="flex items-center gap-1">
-            <Clock size={15} /> {r.deliveryTimeMin}-{r.deliveryTimeMax} min
-          </span>
-          <span className="flex items-center gap-1">
-            <Bike size={15} />
-            {r.deliveryFee === 0 ? (
-              <span className="text-green-600 font-medium">Grátis</span>
-            ) : (
-              formatCurrency(r.deliveryFee)
-            )}
-          </span>
-        </div>
+        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-gray-500">
+          {r.open ? `${r.deliveryTimeMin}-${r.deliveryTimeMax} min` : <span className="font-semibold">Fechado agora</span>}
+          <Dot />
+          {r.deliveryFee === 0 ? (
+            <span className="font-bold text-emerald-600">Entrega grátis</span>
+          ) : (
+            formatCurrency(r.deliveryFee)
+          )}
+        </p>
       </div>
     </Link>
   )
