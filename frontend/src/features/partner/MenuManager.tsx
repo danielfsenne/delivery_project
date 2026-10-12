@@ -12,7 +12,7 @@ import {
   useSetAvailability,
   useUpdateProduct,
 } from './api'
-import { parsePrice } from './price'
+import { ProductForm } from './ProductForm'
 import { ProductOptionsEditor } from './ProductOptionsEditor'
 import { cn, formatCurrency } from '@/shared/lib/format'
 import { Button, Card, ErrorMessage, Spinner } from '@/shared/components/ui'
@@ -23,45 +23,36 @@ function ProductRow({ restaurantId, product }: { restaurantId: number; product: 
   const remove = useDeleteProduct(restaurantId)
   const [editing, setEditing] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
-  const [price, setPrice] = useState(product.price.toFixed(2).replace('.', ','))
 
-  const savePrice = (e: FormEvent) => {
-    e.preventDefault()
-    const value = parsePrice(price)
-    if (value === null) return
-    update.mutate(
-      { productId: product.id, name: product.name, description: product.description ?? undefined, price: value,
-        imageUrl: product.imageUrl ?? undefined },
-      { onSuccess: () => setEditing(false) },
+  if (editing) {
+    return (
+      <li className="py-3">
+        <ProductForm
+          product={product}
+          submitLabel="Salvar"
+          pending={update.isPending}
+          error={update.isError ? toApiError(update.error).message : undefined}
+          onSubmit={(input) => update.mutate({ productId: product.id, ...input }, { onSuccess: () => setEditing(false) })}
+          onCancel={() => {
+            update.reset()
+            setEditing(false)
+          }}
+        />
+      </li>
     )
   }
 
   return (
     <li className={cn('flex flex-wrap items-center gap-3 py-3', !product.available && 'opacity-60')}>
+      {product.imageUrl && (
+        <img src={product.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
+      )}
       <div className="flex-1 min-w-40">
         <p className="font-medium">{product.name}</p>
         {product.description && <p className="text-xs text-gray-500 line-clamp-1">{product.description}</p>}
       </div>
 
-      {editing ? (
-        <form onSubmit={savePrice} className="flex items-center gap-1">
-          <span className="text-sm text-gray-500">R$</span>
-          <input
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            inputMode="decimal"
-            aria-label={`Preço de ${product.name}`}
-            className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
-            autoFocus
-          />
-          <Button type="submit" className="px-2 py-1" loading={update.isPending}>Salvar</Button>
-          <Button type="button" variant="ghost" className="px-2 py-1" onClick={() => setEditing(false)}>Cancelar</Button>
-        </form>
-      ) : (
-        <button onClick={() => setEditing(true)} className="text-sm font-semibold hover:text-brand-600" title="Alterar preço">
-          {formatCurrency(product.price)}
-        </button>
-      )}
+      <span className="text-sm font-semibold">{formatCurrency(product.price)}</span>
 
       <label className="flex items-center gap-2 text-sm">
         <input
@@ -84,6 +75,10 @@ function ProductRow({ restaurantId, product }: { restaurantId: number; product: 
         <ListPlus size={16} />
         {product.options.length > 0 && product.options.length}
       </button>
+      <button onClick={() => setEditing(true)} aria-label={`Editar ${product.name}`}
+              className="text-gray-400 hover:text-brand-600">
+        <Pencil size={16} />
+      </button>
       <button
         onClick={() => {
           if (window.confirm(`Excluir "${product.name}" do cardápio?`)) remove.mutate(product.id)
@@ -95,10 +90,8 @@ function ProductRow({ restaurantId, product }: { restaurantId: number; product: 
         <Trash2 size={16} />
       </button>
 
-      {(update.isError || availability.isError || remove.isError) && (
-        <p className="w-full text-xs text-red-600">
-          {toApiError(update.error ?? availability.error ?? remove.error).message}
-        </p>
+      {(availability.isError || remove.isError) && (
+        <p className="w-full text-xs text-red-600">{toApiError(availability.error ?? remove.error).message}</p>
       )}
       {showOptions && <ProductOptionsEditor restaurantId={restaurantId} product={product} />}
     </li>
@@ -108,9 +101,6 @@ function ProductRow({ restaurantId, product }: { restaurantId: number; product: 
 function AddProductForm({ restaurantId, category }: { restaurantId: number; category: Category }) {
   const add = useAddProduct(restaurantId)
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [price, setPrice] = useState('')
-  const [description, setDescription] = useState('')
 
   if (!open) {
     return (
@@ -120,37 +110,17 @@ function AddProductForm({ restaurantId, category }: { restaurantId: number; cate
     )
   }
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    const value = parsePrice(price)
-    if (!name.trim() || value === null) return
-    add.mutate(
-      { categoryId: category.id, name: name.trim(), price: value, description: description.trim() || undefined },
-      {
-        onSuccess: () => {
-          setName('')
-          setPrice('')
-          setDescription('')
-          setOpen(false)
-        },
-      },
-    )
-  }
-
   return (
-    <form onSubmit={submit} className="mt-3 grid gap-2 rounded-lg bg-gray-50 p-3 sm:grid-cols-[1fr_120px]">
-      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do produto" aria-label="Nome do produto"
-             className="rounded border border-gray-300 px-2 py-1.5 text-sm" required />
-      <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Preço (ex.: 29,90)" aria-label="Preço"
-             inputMode="decimal" className="rounded border border-gray-300 px-2 py-1.5 text-sm" required />
-      <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição (opcional)"
-             aria-label="Descrição" className="rounded border border-gray-300 px-2 py-1.5 text-sm sm:col-span-2" />
-      {add.isError && <div className="sm:col-span-2"><ErrorMessage message={toApiError(add.error).message} /></div>}
-      <div className="flex gap-2 sm:col-span-2">
-        <Button type="submit" loading={add.isPending}>Adicionar</Button>
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-      </div>
-    </form>
+    <ProductForm
+      submitLabel="Adicionar"
+      pending={add.isPending}
+      error={add.isError ? toApiError(add.error).message : undefined}
+      onSubmit={(input) => add.mutate({ categoryId: category.id, ...input }, { onSuccess: () => setOpen(false) })}
+      onCancel={() => {
+        add.reset()
+        setOpen(false)
+      }}
+    />
   )
 }
 
